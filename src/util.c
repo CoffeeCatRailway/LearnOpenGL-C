@@ -20,7 +20,7 @@ char* readFile(const char* filename)
 	FILE* file = fopen(filename, "rb");
 	if (file == NULL)
 	{
-		printf("Couldn't open file %s\n", filename);
+		fprintf(stderr, "Couldn't open file %s\n", filename);
 		exit(-1);
 	}
 	fseek(file, 0L, SEEK_END);
@@ -74,7 +74,7 @@ GLuint loadTextureFromFile(const char* path, const GLint wrapS, const GLint wrap
 		printf("Texture '%s' loaded\n", path);
 	} else
 	{
-		printf("Failed to load texture: %s\n", path);
+		fprintf(stderr, "Failed to load texture: %s\n", path);
 	}
 	stbi_image_free(imageData);
 

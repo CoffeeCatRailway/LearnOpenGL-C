@@ -98,7 +98,7 @@ array_float_t* loadOBJ(const char* filename)
 	FILE* file = fopen(filename, "r");
 	if (!file)
 	{
-		printf("Could not open file %s\n", filename);
+		fprintf(stderr, "Could not open file %s\n", filename);
 		exit(EXIT_FAILURE);
 	}
 

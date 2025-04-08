@@ -12,7 +12,7 @@ void compileShader(GLuint* shader, GLenum shaderType, const char* shaderFilePath
 {
 	*shader = glCreateShader(shaderType);
 	if (*shader == 0)
-		printf("Could not load shader: %s\n", shaderFilePath);
+		fprintf(stderr, "Could not load shader: %s\n", shaderFilePath);
 
 	const char* shaderSource = readFile(shaderFilePath);
 	glShaderSource(*shader, 1, &shaderSource, NULL);
@@ -25,13 +25,13 @@ void compileShader(GLuint* shader, GLenum shaderType, const char* shaderFilePath
 
 	if (isCompiled == GL_FALSE)
 	{
-		printf("Shader compile error: %s\n", shaderFilePath);
+		fprintf(stderr, "Shader compile error: %s\n", shaderFilePath);
 
 		GLint logSize = 0;
 		glGetShaderiv(*shader, GL_INFO_LOG_LENGTH, &logSize);
 		char infoBuffer[logSize];
 		glGetShaderInfoLog(*shader, logSize, &logSize, infoBuffer);
-		printf(infoBuffer);
+		fprintf(stderr, infoBuffer);
 
 		glDeleteShader(*shader);
 		exit(-1);

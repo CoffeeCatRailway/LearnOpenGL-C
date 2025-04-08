@@ -188,8 +188,8 @@ int main()
 	stbi_set_flip_vertically_on_load(1);
 
 	// load textures
-	const GLuint diffuseTexture = loadTextureFromFile("resources/textures/container2.png", GL_REPEAT, GL_REPEAT);
-	const GLuint specularTexture = loadTextureFromFile("resources/textures/white.png", GL_REPEAT, GL_REPEAT);
+	const GLuint diffuseTexture = loadTextureFromFile("resources/textures/brick_wall.jpg", GL_REPEAT, GL_REPEAT);
+	const GLuint specularTexture = loadTextureFromFile("resources/textures/brick_wall_specular.jpg", GL_REPEAT, GL_REPEAT);
 	// GLuint emissionMap = loadTextureFromFile("resources/textures/container2_emission.png");
 	const GLuint grassTexture = loadTextureFromFile("resources/textures/grass.png", GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 	const GLuint grassSpecularTexture = loadTextureFromFile("resources/textures/grass_specular.png", GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
@@ -272,26 +272,26 @@ int main()
 		setUniform1f(&shaderLighting, "u_lights[0].quadratic", 75.f / (lightRange * lightRange));
 
 		// Light 2 Camera
-		lightColor[0] = 1.f;
-		lightColor[1] = 1.f;
-		lightColor[2] = 1.f;
-		vec3_scale(ambientColor, lightColor, .75f);
-		vec3_scale(diffuseColor, lightColor, .75f);
-		lightRange = 100.f;
-
-		setUniform1i(&shaderLighting, "u_lights[1].mode", F_LHT_SPOT);
-		setUniform3fv(&shaderLighting, "u_lights[1].position", camera->position);
-		setUniform3fv(&shaderLighting, "u_lights[1].direction", camera->front);
-		setUniform1f(&shaderLighting, "u_lights[1].cutOffInner", cosf(RAD(15.f)));
-		setUniform1f(&shaderLighting, "u_lights[1].cutOffOuter", cosf(RAD(17.f)));
-
-		setUniform3fv(&shaderLighting, "u_lights[1].ambient", ambientColor);
-		setUniform3fv(&shaderLighting, "u_lights[1].diffuse", diffuseColor);
-		setUniform3f(&shaderLighting, "u_lights[1].specular", 1.f, 1.f, 1.f);
-
-		setUniform1f(&shaderLighting, "u_lights[1].constant", 1.f);
-		setUniform1f(&shaderLighting, "u_lights[1].linear", 4.5f / lightRange);
-		setUniform1f(&shaderLighting, "u_lights[1].quadratic", 75.f / (lightRange * lightRange));
+		// lightColor[0] = 1.f;
+		// lightColor[1] = 1.f;
+		// lightColor[2] = 1.f;
+		// vec3_scale(ambientColor, lightColor, .75f);
+		// vec3_scale(diffuseColor, lightColor, .75f);
+		// lightRange = 100.f;
+		//
+		// setUniform1i(&shaderLighting, "u_lights[1].mode", F_LHT_SPOT);
+		// setUniform3fv(&shaderLighting, "u_lights[1].position", camera->position);
+		// setUniform3fv(&shaderLighting, "u_lights[1].direction", camera->front);
+		// setUniform1f(&shaderLighting, "u_lights[1].cutOffInner", cosf(RAD(15.f)));
+		// setUniform1f(&shaderLighting, "u_lights[1].cutOffOuter", cosf(RAD(17.f)));
+		//
+		// setUniform3fv(&shaderLighting, "u_lights[1].ambient", ambientColor);
+		// setUniform3fv(&shaderLighting, "u_lights[1].diffuse", diffuseColor);
+		// setUniform3f(&shaderLighting, "u_lights[1].specular", 1.f, 1.f, 1.f);
+		//
+		// setUniform1f(&shaderLighting, "u_lights[1].constant", 1.f);
+		// setUniform1f(&shaderLighting, "u_lights[1].linear", 4.5f / lightRange);
+		// setUniform1f(&shaderLighting, "u_lights[1].quadratic", 75.f / (lightRange * lightRange));
 
 		// Light 3 Sun
 		lightColor[0] = 1.f;

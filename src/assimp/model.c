@@ -49,7 +49,7 @@ void loadModel(model_t* model, const char* path)
 	const struct aiScene* scene = aiImportFile(path, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
 	if (!scene || (scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) || !scene->mRootNode)
 	{
-		printf("Error import model file: %s - %s\n", path, aiGetErrorString());
+		fprintf(stderr, "Error import model file: %s - %s\n", path, aiGetErrorString());
 		aiReleaseImport(scene);
 		return;
 	}
