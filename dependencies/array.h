@@ -3,7 +3,7 @@
  * If you want to define a new array type put 'ARRAY_H_DEFINE_ARRAY(TYPE_HERE)'
  * e.g. ARRAY_H_DEFINE_ARRAY(car_t) // 'car_t' would be a struct
  *
- * Version: 2.1
+ * Version: 2.2
  * Created by Duncan (CoffeeCatRailway) on 01/04/2025.
  * https://gist.github.com/CoffeeCatRailway/c55f8f56aaf40e2ecd5c3c6994370289
  *
@@ -39,6 +39,11 @@
  *	- Added 'array_type_remove_at', does not reallocate memory use 'array_type_adjust'
  *	- Removed 'ARRAY_NO_INLINE'
  *	- Added 'array_type_adjust', use after removing large amounts from array
+ *
+ * 08/04/2025
+ * Changelog 2.2:
+ *	- Method declarations
+ *	- Methods that alter array values and/or capacity now take array pointer pointer
  */
 
 #ifndef ARRAY_H_
@@ -56,147 +61,89 @@
 		size_t capacityIncrement; \
 		type* array; \
 	} array_##type##_t; \
+	\
+	static array_##type##_t* array_##type##_create(const size_t capacity); \
+	static void array_##type##_delete(array_##type##_t* array); \
+	static void array_##type##_push(array_##type##_t** array, type element); \
+	static type array_##type##_remove_at(array_##type##_t** array, const size_t i); \
+	static void array_##type##_adjust(array_##type##_t** array); \
+	\
 	static array_##type##_t* array_##type##_create(const size_t capacity) \
 	{ \
 		array_##type##_t* array = malloc(sizeof(array_##type##_t) + capacity * sizeof(type)); \
+		if (array == NULL) \
+		{ \
+			fprintf(stderr, "Out of memory! Failed to allocate array!\n"); \
+			array_##type##_delete(array); \
+			exit(EXIT_FAILURE); \
+		} \
 		array->size = 0; \
 		array->capacity = capacity; \
 		array->capacityIncrement = 2; \
 		array->array = (type*) (array + 1); \
 		return array; \
 	} \
+	\
 	static void array_##type##_delete(array_##type##_t* array) \
 	{ \
 		array->array = NULL; \
 		array->size = array->capacity = 0; \
 		free(array); \
 	} \
-	static void array_##type##_push(array_##type##_t* array, type element) \
+	\
+	static void array_##type##_push(array_##type##_t** array, type element) \
 	{ \
-		array->size++; \
-		if (array->size > array->capacity) \
+		(*array)->size++; \
+		if ((*array)->size > (*array)->capacity) \
 		{ \
-			array->capacity += array->capacityIncrement; \
-			array_##type##_t* newArray = realloc(array, sizeof(array_##type##_t) + array->capacity * sizeof(type)); \
+			(*array)->capacity += (*array)->capacityIncrement; \
+			array_##type##_t* newArray = realloc(*array, sizeof(array_##type##_t) + (*array)->capacity * sizeof(type)); \
 			if (newArray == NULL) \
 			{ \
-				printf("Out of memory!\n"); \
+				fprintf(stderr, "Out of memory! Failed to reallocate array!\n"); \
 				array_##type##_delete(newArray); \
-				array_##type##_delete(array); \
+				array_##type##_delete(*array); \
 				exit(EXIT_FAILURE); \
 			} \
-			array = newArray; \
-			array->array = (type*) (array + 1); \
+			*array = newArray; \
+			(*array)->array = (type*) (*array + 1); \
 		} \
-		array->array[array->size - 1] = element; \
+		(*array)->array[(*array)->size - 1] = element; \
 	} \
-	static type array_##type##_remove_at(array_##type##_t* array, const size_t i) \
+	\
+	static type array_##type##_remove_at(array_##type##_t** array, const size_t i) \
 	{ \
-		const type value = array->array[i]; \
-		if (i < array->size - 1) \
+		const type value = (*array)->array[i]; \
+		if (i < (*array)->size - 1) \
 		{ \
-			const size_t segmentSize = (array->size - i - 1) * sizeof(type); \
-			memcpy(&array->array[i], &array->array[i + 1], segmentSize); \
+			const size_t segmentSize = ((*array)->size - i - 1) * sizeof(type); \
+			memcpy(&(*array)->array[i], &(*array)->array[i + 1], segmentSize); \
 		} \
-		array->size--; \
+		(*array)->size--; \
 		return value; \
 	} \
-	static void array_##type##_adjust(array_##type##_t* array) \
+	\
+	static void array_##type##_adjust(array_##type##_t** array) \
 	{ \
-		const size_t capacityAdjusted = array->size - 1 - ((array->size - 1) % array->capacityIncrement) + array->capacityIncrement; \
-		if (capacityAdjusted != array->capacity) \
+		const size_t capacityAdjusted = (*array)->size - 1 - (((*array)->size - 1) % (*array)->capacityIncrement) + (*array)->capacityIncrement; \
+		if (capacityAdjusted != (*array)->capacity) \
 		{ \
-			array->capacity = capacityAdjusted; \
-			array_##type##_t* newArray = realloc(array, sizeof(array_##type##_t) + array->capacity * sizeof(type)); \
+			(*array)->capacity = capacityAdjusted; \
+			array_##type##_t* newArray = realloc(*array, sizeof(array_##type##_t) + (*array)->capacity * sizeof(type)); \
 			if (newArray == NULL) \
 			{ \
-				printf("Out of memory!\n"); \
+				fprintf(stderr, "Out of memory! Failed to reallocate array!\n"); \
 				array_##type##_delete(newArray); \
-				array_##type##_delete(array); \
+				array_##type##_delete(*array); \
 				exit(EXIT_FAILURE); \
 			} \
-			array = newArray; \
-			array->array = (type*) (array + 1); \
+			*array = newArray; \
+			(*array)->array = (type*) (*array + 1); \
 		} \
 	}
 
 // ARRAY_H_DEFINE_ARRAY(int) // array_int_t
-typedef struct array_float_t
-{
-	size_t size;
-	size_t capacity;
-	size_t capacityIncrement;
-	float* array;
-} array_float_t;
-
-static array_float_t* array_float_create(const size_t capacity)
-{
-	array_float_t* array = malloc(sizeof(array_float_t) + capacity * sizeof(float));
-	array->size = 0;
-	array->capacity = capacity;
-	array->capacityIncrement = 2;
-	array->array = (float*) (array + 1);
-	return array;
-}
-
-static void array_float_delete(array_float_t* array)
-{
-	array->array = NULL;
-	array->size = array->capacity = 0;
-	free(array);
-}
-
-static void array_float_push(array_float_t** array, float element)
-{
-	(*array)->size++;
-	if ((*array)->size > (*array)->capacity)
-	{
-		(*array)->capacity += (*array)->capacityIncrement;
-		array_float_t* newArray = realloc(*array, sizeof(array_float_t) + (*array)->capacity * sizeof(float));
-		if (newArray == NULL)
-		{
-			printf("Out of memory!\n");
-			array_float_delete(newArray);
-			array_float_delete(*array);
-			exit(EXIT_FAILURE);
-		}
-		*array = newArray;
-		(*array)->array = (float*) (*array + 1);
-	}
-	(*array)->array[(*array)->size - 1] = element;
-}
-
-static float array_float_remove_at(array_float_t** array, const size_t i)
-{
-	const float value = (*array)->array[i];
-	if (i < (*array)->size - 1)
-	{
-		const size_t segmentSize = ((*array)->size - i - 1) * sizeof(float);
-		memcpy(&(*array)->array[i], &(*array)->array[i + 1], segmentSize);
-	}
-	(*array)->size--;
-	return value;
-}
-
-static void array_float_adjust(array_float_t** array)
-{
-	const size_t capacityAdjusted = (*array)->size - 1 - (((*array)->size - 1) % (*array)->capacityIncrement) + (*array)->
-			capacityIncrement;
-	if (capacityAdjusted != (*array)->capacity)
-	{
-		(*array)->capacity = capacityAdjusted;
-		array_float_t* newArray = realloc(array, sizeof(array_float_t) + (*array)->capacity * sizeof(float));
-		if (newArray == NULL)
-		{
-			printf("Out of memory!\n");
-			array_float_delete(newArray);
-			array_float_delete(*array);
-			exit(EXIT_FAILURE);
-		}
-		*array = newArray;
-		(*array)->array = (float*) (array + 1);
-	}
-} // array_float_t
+ARRAY_H_DEFINE_ARRAY(float) // array_float_t
 // ARRAY_H_DEFINE_ARRAY(double) // array_double_t
 // ARRAY_H_DEFINE_ARRAY(long) // array_long_t
 // ARRAY_H_DEFINE_ARRAY(short) // array_short_t
@@ -215,10 +162,10 @@ static void array_float_adjust(array_float_t** array)
 // If you want to do so, call 'array_type_adjust' afterward
 // This will reallocate (shrink) memory && lower capacity to nearest increment
 // array_int_t* array_int = array_int_create(2);	// size=0 capacity=2
-// array_int_push(array_int, 1);					// size=1 capacity=2
-// array_int_push(array_int, 2);					// size=2 capacity=2
-// array_int_push(array_int, 3);					// size=3 capacity=4
-// array_int_remove_at(array_int, 0);				// size=2 capacity=4
-// array_int_adjust(array_int);						// size=2 capacity=2
+// array_int_push(&array_int, 1);					// size=1 capacity=2
+// array_int_push(&array_int, 2);					// size=2 capacity=2
+// array_int_push(&array_int, 3);					// size=3 capacity=4
+// array_int_remove_at(&array_int, 0);				// size=2 capacity=4
+// array_int_adjust(&array_int);					// size=2 capacity=2
 
 #endif /* ARRAY_H_ */
