@@ -16,7 +16,7 @@
 
 typedef struct mesh_t
 {
-	int numVertices;
+	GLsizei numVertices;
 	array_float_t* vertices; // Includes position, normal & uv (8 floats)
 	GLuint vao, vbo;
 } mesh_t;

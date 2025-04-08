@@ -27,6 +27,7 @@ set(SOURCE_FILES src/main.c
 add_executable(${CMAKE_PROJECT_NAME} ${SOURCE_FILES})
 
 add_custom_target(COPY_RESOURCES ALL
+        COMMAND ${CMAKE_COMMAND} -E rm -rf ${PROJECT_BINARY_DIR}/resources
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${PROJECT_SOURCE_DIR}/resources
         ${PROJECT_BINARY_DIR}/resources
