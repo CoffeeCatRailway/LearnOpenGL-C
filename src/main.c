@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include <glad/glad.h>
 #define GLFW_INCLUDE_NONE
@@ -33,7 +34,7 @@ const unsigned int HEIGHT = 600;
 const float CAMERA_SPEED = 7.f;
 const float MOUSE_SENSITIVITY = .1f;
 
-unsigned int firstMouse = 1;
+bool firstMouse = true;
 float lastX = 0.f;
 float lastY = 0.f;
 float fov = 45.f;
@@ -42,7 +43,7 @@ float deltaTime = 0.f;
 float lastFrame = 0.f;
 
 camera_t* camera;
-unsigned int mouseCaptured = 0;
+bool mouseCaptured = false;
 
 void errorCallback(int error, const char* description);
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
@@ -181,7 +182,7 @@ int main()
 	glVertexAttribPointer(uvLocation, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*) (6 * sizeof(float)));
 	glEnableVertexAttribArray(uvLocation);
 
-	mesh_t* meshMonkey = meshCreate("resources/models/ico_sphere.obj", false);
+	mesh_t* meshMonkey = meshCreate("resources/models/sphere.obj", false);
 	mesh_t* meshCube = meshCreate("resources/models/cube_fixed.obj", false);
 
 	// Load image, create texture & generate mipmaps
@@ -419,6 +420,9 @@ void framebufferSizeCallback(GLFWwindow* window, const int width, const int heig
 
 void processInput(GLFWwindow *window)
 {
+	if (!mouseCaptured)
+		return;
+
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 		cameraMoveForward(camera, CAMERA_SPEED * deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
@@ -439,14 +443,14 @@ void keyCallback(GLFWwindow* window, const int key, int scancode, const int acti
 {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 	{
-		//		glfwSetWindowShouldClose(window, GLFW_TRUE);
+		// glfwSetWindowShouldClose(window, GLFW_TRUE);
 		if (mouseCaptured)
 		{
-			mouseCaptured = 0;
+			mouseCaptured = false;
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 		} else
 		{
-			mouseCaptured = 1;
+			mouseCaptured = true;
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		}
 	}
@@ -464,7 +468,7 @@ void mouseCallback(GLFWwindow* window, const double xPosIn, const double yPosIn)
 	{
 		lastX = xPos;
 		lastY = yPos;
-		firstMouse = 0;
+		firstMouse = false;
 	}
 
 	const float xOffset = xPos - lastX;
