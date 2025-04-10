@@ -55,6 +55,7 @@ float lastFrame = 0.f;
 camera_t* camera;
 bool mouseCaptured = false;
 
+bool showDemoWindow = false;
 ImGuiContext* imguiCtx;
 ImGuiIO* imguiIO;
 
@@ -69,13 +70,15 @@ void scrollCallback(GLFWwindow* window, double xOffset, double yOffset);
 void guiInit(GLFWwindow* window)
 {
 	imguiCtx = igCreateContext(NULL);
-	imguiIO = igGetIO_ContextPtr(imguiCtx);
+	// imguiIO = igGetIO_ContextPtr(imguiCtx);
+	imguiIO = igGetIO_Nil();
 
 	const char* glslVersion = "#version 330 core";
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init(glslVersion);
 
 	igStyleColorsDark(NULL);
+	// igShowDemoWindow(false);
 }
 
 void guiTerminate()
@@ -97,15 +100,13 @@ void guiUpdate()
 	ImGui_ImplGlfw_NewFrame();
 	igNewFrame();
 
+	if (showDemoWindow)
+		igShowDemoWindow(&showDemoWindow);
+
 	igBegin("Test", NULL, 0);
 	igText("Test");
 	igButton("Test", (ImVec2){0.f, 0.f});
 	igEnd();
-
-	// // Normally user code doesn't need/want to call this because positions are saved in .ini file anyway.
-	// // Here we just want to make the demo initial state a bit more friendly!
-	// igSetNextWindowPos((ImVec2){0.f, 0.f}, ImGuiCond_FirstUseEver, (ImVec2){0.f, 0.f});
-	igShowDemoWindow(NULL);
 }
 
 int main()
