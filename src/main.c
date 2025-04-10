@@ -15,6 +15,16 @@
 
 #include <linmath.h>
 
+#define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
+// #define CIMGUI_USE_GLFW
+// #define CIMGUI_USE_OPENGL3
+#include <cimgui.h>
+#include <cimgui_impl.h>
+// #include <imgui_impl_glfw.h>
+// #include <imgui_impl_opengl3.h>
+// #include <imgui/backends/imgui_impl_glfw.h>
+// #include <imgui/backends/imgui_impl_opengl3.h>
+
 #include "util.h"
 #include "shader.h"
 #include "camera.h"
@@ -45,13 +55,58 @@ float lastFrame = 0.f;
 camera_t* camera;
 bool mouseCaptured = false;
 
+ImGuiContext* imguiCtx;
+ImGuiIO* imguiIO;
+
 void errorCallback(int error, const char* description);
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 
-void processInput(GLFWwindow *window);
+void processInput(GLFWwindow* window);
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void mouseCallback(GLFWwindow* window, double xPosIn, double yPosIn);
 void scrollCallback(GLFWwindow* window, double xOffset, double yOffset);
+
+void guiInit(GLFWwindow* window)
+{
+	imguiCtx = igCreateContext(NULL);
+	imguiIO = igGetIO_ContextPtr(imguiCtx);
+
+	const char* glslVersion = "#version 330 core";
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui_ImplOpenGL3_Init(glslVersion);
+
+	igStyleColorsDark(NULL);
+}
+
+void guiTerminate()
+{
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	igDestroyContext(imguiCtx);
+}
+
+void guiRender()
+{
+	igRender();
+	ImGui_ImplOpenGL3_RenderDrawData(igGetDrawData());
+}
+
+void guiUpdate()
+{
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	igNewFrame();
+
+	igBegin("Test", NULL, 0);
+	igText("Test");
+	igButton("Test", (ImVec2){0.f, 0.f});
+	igEnd();
+
+	// // Normally user code doesn't need/want to call this because positions are saved in .ini file anyway.
+	// // Here we just want to make the demo initial state a bit more friendly!
+	// igSetNextWindowPos((ImVec2){0.f, 0.f}, ImGuiCond_FirstUseEver, (ImVec2){0.f, 0.f});
+	igShowDemoWindow(NULL);
+}
 
 int main()
 {
@@ -94,6 +149,8 @@ int main()
 		glfwTerminate();
 		exit(EXIT_FAILURE);
 	}
+
+	guiInit(window);
 
 	glViewport(0, 0, WIDTH, HEIGHT);
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
@@ -224,6 +281,7 @@ int main()
 	mat4x4_identity(view);
 	mat4x4_identity(projection);
 
+	int width, height;
 	while (!glfwWindowShouldClose(window))
 	{
 		// Update/Input
@@ -231,13 +289,14 @@ int main()
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
+		guiUpdate();
+
 		processInput(window);
 
 		// Render
 		glClearColor(.1f, .1f, .1f, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		int width, height;
 		glfwGetFramebufferSize(window, &width, &height);
 		mat4x4_perspective(projection, RAD(fov), (float) width / (float) height, .1f, 100.f);
 		cameraGetViewMatrix(camera, &view);
@@ -379,12 +438,15 @@ int main()
 		glBindVertexArray(meshCube->vao);
 		glDrawArrays(GL_TRIANGLES, 0, meshCube->numVertices);
 
+		guiRender();
+
 		// Swap buffers & poll IO
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
 
 	printf("Cleaning up\n");
+	guiTerminate();
 	cameraDelete(camera);
 
 	glDeleteVertexArrays(1, &vaoPlane);

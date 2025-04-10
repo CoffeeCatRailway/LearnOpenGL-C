@@ -1,17 +1,25 @@
 cmake_minimum_required(VERSION 3.30)
-project(LearnOpenGL C)
+project(LearnOpenGL)
 
 find_package(OpenGL REQUIRED)
 
 set(CMAKE_C_STANDARD 11)
+set(CMAKE_VERBOSE_MAKEFILE ON)
 
-# Include GLFW
+# Include dependencies
 add_subdirectory(glfw)
-include_directories(glfw/include)
+include_directories(
+        glfw/include
+        cimgui
+        cimgui/imgui
+        glad/include
+        dependencies)
 
-# Include GLAD & other dependencies
-include_directories(glad/include)
-include_directories(dependencies)
+file(GLOB CIMGUI_SOURCES
+        cimgui/*.cpp
+        cimgui/imgui/*.cpp
+        cimgui/imgui/backends/imgui_impl_glfw.cpp
+        cimgui/imgui/backends/imgui_impl_opengl3.cpp)
 
 set(SOURCE_FILES src/main.c
         glad/src/glad.c
@@ -24,7 +32,12 @@ set(SOURCE_FILES src/main.c
         src/model.c
         src/model.h)
 
+add_library(cimgui STATIC ${CIMGUI_SOURCES})
+add_compile_definitions("IMGUI_IMPL_OPENGL_LOADED_GL3W")
+target_compile_definitions(cimgui PUBLIC "-DIMGUI_IMPL_API=extern \"C\"")
+
 add_executable(${CMAKE_PROJECT_NAME} ${SOURCE_FILES})
+target_compile_definitions(${PROJECT_NAME} PUBLIC -DCIMGUI_USE_OPENGL3 -DCIMGUI_USE_GLFW)
 
 add_custom_target(COPY_RESOURCES ALL
         COMMAND ${CMAKE_COMMAND} -E rm -rf ${PROJECT_BINARY_DIR}/resources
@@ -34,4 +47,6 @@ add_custom_target(COPY_RESOURCES ALL
         COMMENT "Copying resources into binary directory")
 add_dependencies(${CMAKE_PROJECT_NAME} COPY_RESOURCES)
 
-target_link_libraries(${CMAKE_PROJECT_NAME} glfw ${GLFW_LIBRARIES} ${OPENGL_LIBRARIES})
+target_link_libraries(${CMAKE_PROJECT_NAME}
+        glfw ${GLFW_LIBRARIES} ${OPENGL_LIBRARIES}
+        cimgui)
