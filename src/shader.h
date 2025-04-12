@@ -9,9 +9,9 @@
 
 #include <linmath.h>
 
-void compileShader(GLuint* shader, GLenum shaderType, const char* shaderFile);
+void shaderCompile(GLuint* shader, GLenum shaderType, const char* shaderFile);
 
-GLuint createShader(const char* vertexFile, const char* fragmentFile);
+GLuint shaderCreate(const char* vertexFile, const char* fragmentFile);
 
 void setUniform1i(const GLuint* shader, const char* name, GLint x);
 void setUniform1ui(const GLuint* shader, const char* name, GLuint x);

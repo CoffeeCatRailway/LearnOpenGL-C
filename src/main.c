@@ -51,8 +51,8 @@ typedef struct light_t
 	float range;
 } light_t;
 
-const unsigned int WIDTH = 800;
-const unsigned int HEIGHT = 600;
+const unsigned int WIDTH = 1600;
+const unsigned int HEIGHT = 900;
 
 const float CAMERA_SPEED = 7.f;
 const float MOUSE_SENSITIVITY = .1f;
@@ -133,7 +133,7 @@ int main()
 
 	guiInit(window);
 
-	glViewport(0, 0, WIDTH, HEIGHT);
+	// glViewport(0, 0, WIDTH, HEIGHT);
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
 	glEnable(GL_DEPTH_TEST);
@@ -185,6 +185,16 @@ int main()
 		 0.f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f
 	};
 
+	const float quadVerticies[] = {
+		// pos     uv
+		-1.f, 1.f, 0.f, 1.f,
+		-1.f, -1.f, 0.f, 0.f,
+		1.f, -1.f, 1.f, 0.f,
+		-1.f, 1.f, 0.f, 1.f,
+		1.f, -1.f, 1.f, 0.f,
+		1.f, 1.f, 1.f, 1.f
+	};
+
 	const vec3 cubePositions[] = {
 		{0.f, 0.f, 0.f},
 		{-1.5f, -2.2f, 2.5f},
@@ -199,8 +209,9 @@ int main()
 	};
 
 	// Build & compile shaders
-	const GLuint shaderLighting = createShader("resources/shaders/light.vert", "resources/shaders/light_multi.frag");
-	const GLuint shaderColorCube = createShader("resources/shaders/single_color.vert", "resources/shaders/single_color.frag");
+	const GLuint shaderLighting = shaderCreate("resources/shaders/light.vert", "resources/shaders/light_multi.frag");
+	const GLuint shaderSingleColor = shaderCreate("resources/shaders/single_color.vert", "resources/shaders/single_color.frag");
+	const GLuint shaderQuadTexture = shaderCreate("resources/shaders/quad_texture.vert", "resources/shaders/quad_texture.frag");
 
 	GLuint vaoPlaneCross, vboPlaneCross;
 	glGenVertexArrays(1, &vaoPlaneCross);
@@ -209,15 +220,30 @@ int main()
 	glBindBuffer(GL_ARRAY_BUFFER, vboPlaneCross);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(planeCrossVertices), planeCrossVertices, GL_STATIC_DRAW);
 
-	const GLint positionLocation = glGetAttribLocation(shaderLighting, "i_position");
+	GLint positionLocation = glGetAttribLocation(shaderLighting, "i_position");
 	const GLint normalLocation = glGetAttribLocation(shaderLighting, "i_normal");
-	const GLint uvLocation = glGetAttribLocation(shaderLighting, "i_uv");
+	GLint uvLocation = glGetAttribLocation(shaderLighting, "i_uv");
 
 	glVertexAttribPointer(positionLocation, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*) 0);
 	glEnableVertexAttribArray(positionLocation);
 	glVertexAttribPointer(normalLocation, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*) (3 * sizeof(float)));
 	glEnableVertexAttribArray(normalLocation);
 	glVertexAttribPointer(uvLocation, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*) (6 * sizeof(float)));
+	glEnableVertexAttribArray(uvLocation);
+
+	GLuint vaoQuad, vboQuad;
+	glGenVertexArrays(1, &vaoQuad);
+	glGenBuffers(1, &vboQuad);
+	glBindVertexArray(vaoQuad);
+	glBindBuffer(GL_ARRAY_BUFFER, vboQuad);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVerticies), quadVerticies, GL_STATIC_DRAW);
+
+	positionLocation = glGetAttribLocation(shaderQuadTexture, "i_position");
+	uvLocation = glGetAttribLocation(shaderQuadTexture, "i_uv");
+
+	glVertexAttribPointer(positionLocation, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*) 0);
+	glEnableVertexAttribArray(positionLocation);
+	glVertexAttribPointer(uvLocation, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*) (2 * sizeof(float)));
 	glEnableVertexAttribArray(uvLocation);
 
 	mesh_t* meshMonkey = meshCreate("resources/models/sphere.obj", false);
@@ -239,6 +265,31 @@ int main()
 	setUniform1i(&shaderLighting, "u_material.diffuseTex", 0);
 	setUniform1i(&shaderLighting, "u_material.specularTex", 1);
 	setUniform1f(&shaderLighting, "u_material.shininess", 64.f);
+
+	glUseProgram(shaderQuadTexture);
+	setUniform1i(&shaderQuadTexture, "u_texture", 0);
+
+	// Framebuffer
+	GLuint framebuffer;
+	glGenFramebuffers(1, &framebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+
+	GLuint textureColorbuffer;
+	glGenTextures(1, &textureColorbuffer);
+	glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, textureColorbuffer, 0);
+
+	GLuint rbo;
+	glGenRenderbuffers(1, &rbo);
+	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, WIDTH, HEIGHT);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		fprintf(stderr, "Framebuffer is not complete!\n");
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	// Setup camera
 	// Initialize yaw to -90 since 0 results in a direction vector pointing to the right
@@ -309,12 +360,13 @@ int main()
 	lights[2].specular[2] = 1.f;
 	lights[2].range = 200.f;
 
-	mat4x4 view, projection;
+	mat4x4 view, projection, identity;
 
+	mat4x4_identity(identity);
 	mat4x4_identity(view);
 	mat4x4_identity(projection);
 
-	int width, height;
+	// int width, height;
 	while (!glfwWindowShouldClose(window))
 	{
 		// Update/Input
@@ -343,11 +395,14 @@ int main()
 		processInput(window);
 
 		// Render
+		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+		glEnable(GL_DEPTH_TEST);
+
 		glClearColor(clearColor[0], clearColor[1], clearColor[2], 1.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glfwGetFramebufferSize(window, &width, &height);
-		mat4x4_perspective(projection, RAD(fov), (float) width / (float) height, .1f, 100.f);
+		// glfwGetFramebufferSize(window, &width, &height);
+		mat4x4_perspective(projection, RAD(fov), (float) WIDTH / (float) HEIGHT, .1f, 100.f);
 		cameraGetViewMatrix(camera, &view);
 
 		glUseProgram(shaderLighting);
@@ -441,20 +496,32 @@ int main()
 		// glEnable(GL_DEPTH_TEST);
 
 		// Draw lamp
-		glUseProgram(shaderColorCube);
-		setUniform3fv(&shaderColorCube, "u_color", lightColor);
+		glUseProgram(shaderSingleColor);
+		setUniform3fv(&shaderSingleColor, "u_color", lightColor);
 
-		setUniformMatrix4fv(&shaderColorCube, "u_view", (GLfloat*) view);
-		setUniformMatrix4fv(&shaderColorCube, "u_projection", (GLfloat*) projection);
+		setUniformMatrix4fv(&shaderSingleColor, "u_view", (GLfloat*) view);
+		setUniformMatrix4fv(&shaderSingleColor, "u_projection", (GLfloat*) projection);
 
 		mat4x4_identity(model);
 		mat4x4_translate(model, lights[2].position[0], lights[2].position[1], lights[2].position[2]);
 		// mat4x4_scale(model, model, .2f); // Doesn't work?
 		mat4x4_scale_aniso(model, model, .2f, .2f, .2f);
-		setUniformMatrix4fv(&shaderColorCube, "u_model", (GLfloat*) model);
+		setUniformMatrix4fv(&shaderSingleColor, "u_model", (GLfloat*) model);
 
 		glBindVertexArray(meshCube->vao);
 		glDrawArrays(GL_TRIANGLES, 0, meshCube->numVertices);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glDisable(GL_DEPTH_TEST);
+
+		glClearColor(1.f, 1.f, 1.f, 1.f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		glUseProgram(shaderQuadTexture);
+		glBindVertexArray(vaoQuad);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
 
 		guiRender();
 
@@ -470,17 +537,24 @@ int main()
 	glDeleteVertexArrays(1, &vaoPlaneCross);
 	glDeleteBuffers(1, &vboPlaneCross);
 
+	glDeleteVertexArrays(1, &vaoQuad);
+	glDeleteBuffers(1, &vboQuad);
+
 	meshDestroy(meshMonkey);
 	meshDestroy(meshCube);
 
 	glDeleteProgram(shaderLighting);
-	glDeleteProgram(shaderColorCube);
+	glDeleteProgram(shaderSingleColor);
+	glDeleteProgram(shaderQuadTexture);
 
 	glDeleteTextures(1, &diffuseTexture);
 	glDeleteTextures(1, &specularTexture);
 
 	glDeleteTextures(1, &grassTexture);
 	glDeleteTextures(1, &grassSpecularTexture);
+
+	glDeleteRenderbuffers(1, &rbo);
+	glDeleteFramebuffers(1, &framebuffer);
 
 	glfwDestroyWindow(window);
 

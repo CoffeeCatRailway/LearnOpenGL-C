@@ -23,8 +23,6 @@ mesh_t* meshCreate(const char* filename, const bool instanced)
 	mesh->vertices = loadOBJ(filename);
 	mesh->numVertices = mesh->vertices->size / VERTEX_STRIDE;
 
-	// array_float_delete(vertices);
-
 	// Create vao & vbo
 	glGenVertexArrays(1, &mesh->vao);
 	glBindVertexArray(mesh->vao);
@@ -40,7 +38,7 @@ mesh_t* meshCreate(const char* filename, const bool instanced)
 	// normal
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, VERTEX_STRIDE * sizeof(float), (void*) (3 * sizeof(float)));
-	// normal
+	// uv
 	glEnableVertexAttribArray(2);
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, VERTEX_STRIDE * sizeof(float), (void*) (6 * sizeof(float)));
 

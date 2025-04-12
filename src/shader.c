@@ -8,7 +8,7 @@
 #include "shader.h"
 #include "util.h"
 
-void compileShader(GLuint* shader, GLenum shaderType, const char* shaderFilePath)
+void shaderCompile(GLuint* shader, GLenum shaderType, const char* shaderFilePath)
 {
 	*shader = glCreateShader(shaderType);
 	if (*shader == 0)
@@ -40,11 +40,11 @@ void compileShader(GLuint* shader, GLenum shaderType, const char* shaderFilePath
 }
 
 //void createShader(GLuint* shaderProgram)
-GLuint createShader(const char* vertexFile, const char* fragmentFile)
+GLuint shaderCreate(const char* vertexFile, const char* fragmentFile)
 {
 	GLuint vertexShader, fragmentShader;
-	compileShader(&vertexShader, GL_VERTEX_SHADER, vertexFile);
-	compileShader(&fragmentShader, GL_FRAGMENT_SHADER, fragmentFile);
+	shaderCompile(&vertexShader, GL_VERTEX_SHADER, vertexFile);
+	shaderCompile(&fragmentShader, GL_FRAGMENT_SHADER, fragmentFile);
 
 	const GLuint shaderProgram = glCreateProgram();
 	glAttachShader(shaderProgram, vertexShader);
