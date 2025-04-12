@@ -17,6 +17,7 @@ struct Material
 
 struct Light
 {
+	bool enable;
 	int mode;
 	vec3 position;
 	vec3 direction;
@@ -73,6 +74,8 @@ void main()
 	for (int i = 0; i < N_LIGHTS; i++)
 	{
 		Light light = u_lights[i];
+		if (!light.enable)
+				continue;
 		if (light.mode == F_LHT_DIRECT)
 			result += calcDirectLight(light, norm, viewDir, matDiffuse, matSpecular);
 		

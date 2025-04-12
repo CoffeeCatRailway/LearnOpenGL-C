@@ -16,14 +16,8 @@
 #include <linmath.h>
 
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
-// #define CIMGUI_USE_GLFW
-// #define CIMGUI_USE_OPENGL3
 #include <cimgui.h>
 #include <cimgui_impl.h>
-// #include <imgui_impl_glfw.h>
-// #include <imgui_impl_opengl3.h>
-// #include <imgui/backends/imgui_impl_glfw.h>
-// #include <imgui/backends/imgui_impl_opengl3.h>
 
 #include "util.h"
 #include "shader.h"
@@ -39,9 +33,11 @@
 #define F_LHT_SPOT 3
 #define MAX_LIGHTS 8
 
-typedef struct light_s
+typedef struct light_t
 {
 	bool enable;
+	char name[10];
+
 	int mode;
 	vec3 position;
 	vec3 direction;
@@ -70,6 +66,7 @@ float deltaTime = 0.f;
 float lastFrame = 0.f;
 bool vsync = true;
 
+vec3 clearColor = {0.f, 0.f, 0.f};
 camera_t* camera;
 bool mouseCaptured = false;
 
@@ -86,100 +83,11 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 void mouseCallback(GLFWwindow* window, double xPosIn, double yPosIn);
 void scrollCallback(GLFWwindow* window, double xOffset, double yOffset);
 
-void guiInit(GLFWwindow* window)
-{
-	imguiCtx = igCreateContext(NULL);
-	imguiIO = igGetIO_ContextPtr(imguiCtx);
-
-	const char* glslVersion = "#version 330 core";
-	ImGui_ImplGlfw_InitForOpenGL(window, true);
-	ImGui_ImplOpenGL3_Init(glslVersion);
-
-	igStyleColorsDark(NULL);
-}
-
-void guiRender()
-{
-	igRender();
-	ImGui_ImplOpenGL3_RenderDrawData(igGetDrawData());
-}
-
-void guiTerminate()
-{
-	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplGlfw_Shutdown();
-	igDestroyContext(imguiCtx);
-}
-
-void guiLightSettings(const char* label, light_t* light)
-{
-	if (igCollapsingHeader_BoolPtr(label, NULL, 0))
-	{
-		const char* lightModes[] = {"Direct", "Point", "Spot"};
-		int lightCurrent = light->mode - 1;
-		if (igListBox_Str_arr("Mode", &lightCurrent, lightModes, 3, 3))
-			light->mode = lightCurrent + 1;
-
-		igInputFloat3("Position", light->position, "%.3f", 0);
-		igSliderFloat3("Direction", light->direction, -1.f, 1.f, "%.2f", 0);
-
-		igSliderFloat("Cut Off Inner", &light->cutOffInner, 0.f, 180.f, "%.2f", 0);
-		igSliderFloat("Cut Off Outer", &light->cutOffOuter, 0.f, 180.f, "%.2f", 0);
-
-		igColorEdit3("Ambient", light->ambient, 0);
-		igColorEdit3("Diffuse", light->diffuse, 0);
-		igColorEdit3("Specular", light->specular, 0);
-
-		igInputFloat("Range", &light->range, 10.f, 100.f, "%.2f", 0);
-	}
-}
-
-void guiUpdate()
-{
-	ImGui_ImplOpenGL3_NewFrame();
-	ImGui_ImplGlfw_NewFrame();
-	igNewFrame();
-
-	// igShowDemoWindow(NULL);
-
-	if (!igBegin("Info", NULL, 0))
-	{
-		igEnd();
-		return;
-	}
-
-	igText("FPS: %f", imguiIO->Framerate);
-	if (igCheckbox("Vsync", &vsync))
-		glfwSwapInterval(vsync);
-
-	if (igCollapsingHeader_BoolPtr("Lights", NULL, 0))
-	{
-		igText("Settings for lights in scene");
-		igSeparator();
-		// guiLightSettings("Sun", &lightSun);
-		for (int i = 0; i < MAX_LIGHTS; i++)
-		{
-			if (!lights[i].enable)
-				continue;
-			igPushID_Int(i);
-			char label[7];
-			sprintf(label, "Light%d", i);
-			guiLightSettings(label, &lights[i]);
-			igPopID();
-		}
-	}
-	
-	// const float values[10] = {0.f, 1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f, 8.f, 9.f};
-	// igPlotLines_FnFloatPtr()
-	// igPlotLines_FloatPtr("FPS Plot", &values, 10, 1, "Overlay", 0.f, 10.f, (ImVec2){0.f, 100.f}, 1);
-
-	// igText("Camera pos (%f, %f, %f)", camera->position[0], camera->position[1], camera->position[2]);
-	// igButton("Test", (ImVec2){0.f, 0.f});
-	// igSeparatorText("Camera");
-	// igBulletText("Position (%f, %f, %f)", camera->position[0], camera->position[1], camera->position[2]);
-
-	igEnd();
-}
+void guiInit(GLFWwindow* window);
+void guiRender();
+void guiTerminate();
+void guiLightSettings(const char* label, light_t* light);
+void guiUpdate();
 
 int main()
 {
@@ -242,7 +150,7 @@ int main()
 	// glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	// Setup vertex data & buffers
-	const float planeVertices[] = {
+	const float planeCrossVertices[] = {
 		// positions          // normals           // texture coords
 		// back
 		-0.5f, -0.5f,  0.f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
@@ -294,12 +202,12 @@ int main()
 	const GLuint shaderLighting = createShader("resources/shaders/light.vert", "resources/shaders/light_multi.frag");
 	const GLuint shaderColorCube = createShader("resources/shaders/single_color.vert", "resources/shaders/single_color.frag");
 
-	GLuint vaoPlane, vboPlane;
-	glGenVertexArrays(1, &vaoPlane);
-	glGenBuffers(1, &vboPlane);
-	glBindVertexArray(vaoPlane);
-	glBindBuffer(GL_ARRAY_BUFFER, vboPlane);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), planeVertices, GL_STATIC_DRAW);
+	GLuint vaoPlaneCross, vboPlaneCross;
+	glGenVertexArrays(1, &vaoPlaneCross);
+	glGenBuffers(1, &vboPlaneCross);
+	glBindVertexArray(vaoPlaneCross);
+	glBindBuffer(GL_ARRAY_BUFFER, vboPlaneCross);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(planeCrossVertices), planeCrossVertices, GL_STATIC_DRAW);
 
 	const GLint positionLocation = glGetAttribLocation(shaderLighting, "i_position");
 	const GLint normalLocation = glGetAttribLocation(shaderLighting, "i_normal");
@@ -338,6 +246,7 @@ int main()
 
 	// Sun Light
 	lights[0].enable = true;
+	strcpy(lights[0].name, "Sun");
 	lights[0].mode = F_LHT_DIRECT;
 	lights[0].position[0] = 0.f;
 	lights[0].position[1] = 0.f;
@@ -360,6 +269,7 @@ int main()
 
 	// Camera Light
 	lights[1].enable = true;
+	strcpy(lights[1].name, "Camera");
 	lights[1].mode = F_LHT_SPOT;
 	memcpy(&lights[1].position, &camera->position, sizeof(vec3));
 	memcpy(&lights[1].direction, &camera->front, sizeof(vec3));
@@ -376,8 +286,9 @@ int main()
 	lights[1].specular[2] = 1.f;
 	lights[1].range = 100.f;
 
-	// Point Light
+	// Spot Light
 	lights[2].enable = true;
+	strcpy(lights[2].name, "Spot");
 	lights[2].mode = F_LHT_SPOT;
 	lights[2].position[0] = 0.f;
 	lights[2].position[1] = 10.5f;
@@ -432,7 +343,7 @@ int main()
 		processInput(window);
 
 		// Render
-		glClearColor(.1f, .1f, .1f, 1.f);
+		glClearColor(clearColor[0], clearColor[1], clearColor[2], 1.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		glfwGetFramebufferSize(window, &width, &height);
@@ -442,9 +353,12 @@ int main()
 		glUseProgram(shaderLighting);
 		for (int i = 0; i < MAX_LIGHTS; i++)
 		{
+			char lightParam[23];
+			sprintf(lightParam, "u_lights[%d].enable", i);
+			setUniform1i(&shaderLighting, lightParam, lights[i].enable);
 			if (!lights[i].enable)
 				continue;
-			char lightParam[23];
+
 			sprintf(lightParam, "u_lights[%d].mode", i);
 			setUniform1i(&shaderLighting, lightParam, lights[i].mode);
 			sprintf(lightParam, "u_lights[%d].position", i);
@@ -522,7 +436,7 @@ int main()
 		mat4x4_translate(model, 0.f, -6.f, 0.f);
 		mat4x4_scale_aniso(model, model, 2.f, 2.f, 2.f);
 		setUniformMatrix4fv(&shaderLighting, "u_model", (GLfloat*) model);
-		glBindVertexArray(vaoPlane);
+		glBindVertexArray(vaoPlaneCross);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 		// glEnable(GL_DEPTH_TEST);
 
@@ -553,8 +467,8 @@ int main()
 	guiTerminate();
 	cameraDelete(camera);
 
-	glDeleteVertexArrays(1, &vaoPlane);
-	glDeleteBuffers(1, &vboPlane);
+	glDeleteVertexArrays(1, &vaoPlaneCross);
+	glDeleteBuffers(1, &vboPlaneCross);
 
 	meshDestroy(meshMonkey);
 	meshDestroy(meshCube);
@@ -655,4 +569,106 @@ void scrollCallback(GLFWwindow* window, const double xOffset, const double yOffs
 		fov = 1.f;
 	if (fov > 45.f)
 		fov = 45.f;
+}
+
+void guiInit(GLFWwindow* window)
+{
+	imguiCtx = igCreateContext(NULL);
+	imguiIO = igGetIO_ContextPtr(imguiCtx);
+
+	const char* glslVersion = "#version 330 core";
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui_ImplOpenGL3_Init(glslVersion);
+
+	igStyleColorsDark(NULL);
+}
+
+void guiRender()
+{
+	igRender();
+	ImGui_ImplOpenGL3_RenderDrawData(igGetDrawData());
+}
+
+void guiTerminate()
+{
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	igDestroyContext(imguiCtx);
+}
+
+void guiLightSettings(const char* label, light_t* light)
+{
+	if (igCollapsingHeader_BoolPtr(label, NULL, 0))
+	{
+		igCheckbox("Enable", &light->enable);
+		if (light->enable)
+		{
+			igInputText("Name", light->name, sizeof(light->name), 0, NULL, NULL);
+
+			const char* lightModes[] = {"Direct", "Point", "Spot"};
+			int lightCurrent = light->mode - 1;
+			if (igListBox_Str_arr("Mode", &lightCurrent, lightModes, 3, 3))
+				light->mode = lightCurrent + 1;
+
+			igInputFloat3("Position", light->position, "%.3f", 0);
+			igSliderFloat3("Direction", light->direction, -1.f, 1.f, "%.2f", 0);
+
+			igSliderFloat("Cut Off Inner", &light->cutOffInner, 0.f, 180.f, "%.2f", 0);
+			igSliderFloat("Cut Off Outer", &light->cutOffOuter, 0.f, 180.f, "%.2f", 0);
+
+			igColorEdit3("Ambient", light->ambient, 0);
+			igColorEdit3("Diffuse", light->diffuse, 0);
+			igColorEdit3("Specular", light->specular, 0);
+
+			igInputFloat("Range", &light->range, 10.f, 100.f, "%.2f", 0);
+		}
+	}
+}
+
+void guiUpdate()
+{
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	igNewFrame();
+
+	// igShowDemoWindow(NULL);
+
+	if (!igBegin("Info", NULL, 0))
+	{
+		igEnd();
+		return;
+	}
+
+	igText("FPS: %f", imguiIO->Framerate);
+	if (igCheckbox("Vsync", &vsync))
+		glfwSwapInterval(vsync);
+	igColorEdit3("Clear Color", clearColor, 0);
+
+	if (igCollapsingHeader_BoolPtr("Lights", NULL, 0))
+	{
+		igText("Settings for lights in scene");
+		igSeparator();
+		// guiLightSettings("Sun", &lightSun);
+		for (int i = 0; i < MAX_LIGHTS; i++)
+		{
+			// if (!lights[i].enable)
+			// 	continue;
+			igPushID_Int(i);
+			char label[7];
+			sprintf(label, "Light%d", i);
+			guiLightSettings(label, &lights[i]);
+			igPopID();
+		}
+	}
+
+	// const float values[10] = {0.f, 1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f, 8.f, 9.f};
+	// igPlotLines_FnFloatPtr()
+	// igPlotLines_FloatPtr("FPS Plot", &values, 10, 1, "Overlay", 0.f, 10.f, (ImVec2){0.f, 100.f}, 1);
+
+	// igText("Camera pos (%f, %f, %f)", camera->position[0], camera->position[1], camera->position[2]);
+	// igButton("Test", (ImVec2){0.f, 0.f});
+	// igSeparatorText("Camera");
+	// igBulletText("Position (%f, %f, %f)", camera->position[0], camera->position[1], camera->position[2]);
+
+	igEnd();
 }
