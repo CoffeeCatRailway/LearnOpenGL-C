@@ -248,7 +248,7 @@ int main()
 	glVertexAttribPointer(uvLocation, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*) (2 * sizeof(float)));
 	glEnableVertexAttribArray(uvLocation);
 
-	mesh_t* meshMonkey = meshCreate("resources/models/sphere.obj", false);
+	mesh_t* meshMonkey = meshCreate("resources/models/monkey.obj", false);
 	mesh_t* meshCube = meshCreate("resources/models/cube_fixed.obj", false);
 
 	// Load image, create texture & generate mipmaps
@@ -256,7 +256,7 @@ int main()
 
 	// load textures
 	const GLuint diffuseTexture = loadTextureFromFile("resources/textures/brick_wall.jpg", GL_REPEAT, GL_REPEAT);
-	const GLuint specularTexture = loadTextureFromFile("resources/textures/brick_wall_specular.jpg", GL_REPEAT, GL_REPEAT);
+	const GLuint specularTexture = loadTextureFromFile("resources/textures/white.png", GL_REPEAT, GL_REPEAT);
 	// GLuint emissionMap = loadTextureFromFile("resources/textures/container2_emission.png");
 	const GLuint grassTexture = loadTextureFromFile("resources/textures/grass.png", GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 	const GLuint grassSpecularTexture = loadTextureFromFile("resources/textures/grass_specular.png", GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
@@ -389,6 +389,7 @@ int main()
 
 		vec3_scale(lights[2].ambient, lightColor, .5f);
 		vec3_scale(lights[2].diffuse, lightColor, .75f);
+		memcpy(&lights[2].specular, &lightColor, sizeof(vec3));
 
 		//lights[2].position[0] = 1.2f * cosf(currentFrame);
 		lights[2].position[0] = sinf(currentFrame) * 2.f;
