@@ -731,6 +731,7 @@ void guiUpdate()
 	}
 
 	igText("FPS: %f", imguiIO->Framerate);
+	igText("Delta: %f", deltaTime);
 	if (igCheckbox("Vsync", &vsync))
 		glfwSwapInterval(vsync);
 
