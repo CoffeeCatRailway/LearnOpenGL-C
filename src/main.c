@@ -54,9 +54,6 @@ typedef struct light_t
 const unsigned int WIDTH = 1600;
 const unsigned int HEIGHT = 900;
 
-const float CAMERA_SPEED = 7.f;
-const float MOUSE_SENSITIVITY = .1f;
-
 bool firstMouse = true;
 float lastX = 0.f;
 float lastY = 0.f;
@@ -67,15 +64,17 @@ float lastFrame = 0.f;
 bool vsync = true;
 
 vec3 clearColor = {0.f, 0.f, 0.f};
+bool postProcessing = false;
+
 camera_t* camera;
 bool mouseCaptured = false;
+float cameraSpeed = 7.f;
+float mouseSensitivity = .1f;
 
 ImGuiContext* imguiCtx;
 ImGuiIO* imguiIO;
 
 light_t lights[MAX_LIGHTS];
-
-bool postProcessing = false;
 
 void errorCallback(int error, const char* description);
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
@@ -593,19 +592,19 @@ void processInput(GLFWwindow *window)
 		return;
 
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		cameraMoveForward(camera, CAMERA_SPEED * deltaTime);
+		cameraMoveForward(camera, cameraSpeed * deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		cameraMoveBackward(camera, CAMERA_SPEED * deltaTime);
+		cameraMoveBackward(camera, cameraSpeed * deltaTime);
 
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		cameraMoveLeft(camera, CAMERA_SPEED * deltaTime);
+		cameraMoveLeft(camera, cameraSpeed * deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		cameraMoveRight(camera, CAMERA_SPEED * deltaTime);
+		cameraMoveRight(camera, cameraSpeed * deltaTime);
 
 	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-		cameraMoveUp(camera, CAMERA_SPEED * deltaTime);
+		cameraMoveUp(camera, cameraSpeed * deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-		cameraMoveDown(camera, CAMERA_SPEED * deltaTime);
+		cameraMoveDown(camera, cameraSpeed * deltaTime);
 }
 
 void keyCallback(GLFWwindow* window, const int key, int scancode, const int action, int mods)
@@ -645,7 +644,7 @@ void mouseCallback(GLFWwindow* window, const double xPosIn, const double yPosIn)
 	lastX = xPos;
 	lastY = yPos;
 
-	cameraProcessMouse(camera, xOffset * MOUSE_SENSITIVITY, yOffset * MOUSE_SENSITIVITY);
+	cameraProcessMouse(camera, xOffset * mouseSensitivity, yOffset * mouseSensitivity);
 }
 
 void scrollCallback(GLFWwindow* window, const double xOffset, const double yOffset)
@@ -699,16 +698,19 @@ void guiLightSettings(const char* label, light_t* light)
 			if (igListBox_Str_arr("Mode", &lightCurrent, lightModes, 3, 3))
 				light->mode = lightCurrent + 1;
 
+			igSeparator();
 			igInputFloat3("Position", light->position, "%.3f", 0);
 			igSliderFloat3("Direction", light->direction, -1.f, 1.f, "%.2f", 0);
 
 			igSliderFloat("Cut Off Inner", &light->cutOffInner, 0.f, 180.f, "%.2f", 0);
 			igSliderFloat("Cut Off Outer", &light->cutOffOuter, 0.f, 180.f, "%.2f", 0);
 
+			igSeparator();
 			igColorEdit3("Ambient", light->ambient, 0);
 			igColorEdit3("Diffuse", light->diffuse, 0);
 			igColorEdit3("Specular", light->specular, 0);
 
+			igSeparator();
 			igInputFloat("Range", &light->range, 10.f, 100.f, "%.2f", 0);
 		}
 	}
@@ -731,8 +733,16 @@ void guiUpdate()
 	igText("FPS: %f", imguiIO->Framerate);
 	if (igCheckbox("Vsync", &vsync))
 		glfwSwapInterval(vsync);
-	igColorEdit3("Clear Color", clearColor, 0);
-	igCheckbox("Post Processing", &postProcessing);
+
+	if (igCollapsingHeader_BoolPtr("Camera", NULL, 0))
+	{
+		igColorEdit3("Clear Color", clearColor, 0);
+		igCheckbox("Post Processing", &postProcessing);
+
+		igSeparator();
+		igDragFloat("Speed", &cameraSpeed, .1f, .1f, 20.f, "%.2f", 0);
+		igDragFloat("Mouse Sensitivity", &mouseSensitivity, .05f, .05f, 1.f, "%.2f", 0);
+	}
 
 	if (igCollapsingHeader_BoolPtr("Lights", NULL, 0))
 	{
