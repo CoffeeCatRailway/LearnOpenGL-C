@@ -57,7 +57,6 @@ const unsigned int HEIGHT = 900;
 bool firstMouse = true;
 float lastX = 0.f;
 float lastY = 0.f;
-float fov = 45.f;
 
 float deltaTime = 0.f;
 float lastFrame = 0.f;
@@ -67,6 +66,7 @@ vec3 clearColor = {0.f, 0.f, 0.f};
 bool postProcessing = false;
 
 camera_t* camera;
+float fov = 45.f;
 bool mouseCaptured = false;
 float cameraSpeed = 7.f;
 float mouseSensitivity = .1f;
@@ -655,8 +655,8 @@ void scrollCallback(GLFWwindow* window, const double xOffset, const double yOffs
 	fov -= (float) yOffset;
 	if (fov < 1.f)
 		fov = 1.f;
-	if (fov > 45.f)
-		fov = 45.f;
+	if (fov > 90.f)
+		fov = 90.f;
 }
 
 void guiInit(GLFWwindow* window)
@@ -742,6 +742,7 @@ void guiUpdate()
 		igSeparator();
 		igDragFloat("Speed", &cameraSpeed, .1f, .1f, 20.f, "%.2f", 0);
 		igDragFloat("Mouse Sensitivity", &mouseSensitivity, .05f, .05f, 1.f, "%.2f", 0);
+		igDragFloat("FOV", &fov, 1.f, 1.f, 90.f, "%.1f", 0);
 	}
 
 	if (igCollapsingHeader_BoolPtr("Lights", NULL, 0))
