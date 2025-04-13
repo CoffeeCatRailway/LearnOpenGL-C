@@ -75,6 +75,8 @@ ImGuiIO* imguiIO;
 
 light_t lights[MAX_LIGHTS];
 
+bool postProcessing = false;
+
 void errorCallback(int error, const char* description);
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 
@@ -278,6 +280,8 @@ int main()
 	glGenTextures(1, &textureColorbuffer);
 	glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, textureColorbuffer, 0);
@@ -395,8 +399,15 @@ int main()
 		processInput(window);
 
 		// Render
-		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-		glEnable(GL_DEPTH_TEST);
+		if (postProcessing)
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+			glEnable(GL_DEPTH_TEST);
+		} else
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glEnable(GL_DEPTH_TEST);
+		}
 
 		glClearColor(clearColor[0], clearColor[1], clearColor[2], 1.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -511,17 +522,20 @@ int main()
 		glBindVertexArray(meshCube->vao);
 		glDrawArrays(GL_TRIANGLES, 0, meshCube->numVertices);
 
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glDisable(GL_DEPTH_TEST);
+		if (postProcessing)
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glDisable(GL_DEPTH_TEST);
 
-		glClearColor(1.f, 1.f, 1.f, 1.f);
-		glClear(GL_COLOR_BUFFER_BIT);
+			glClearColor(1.f, 1.f, 1.f, 1.f);
+			glClear(GL_COLOR_BUFFER_BIT);
 
-		glUseProgram(shaderQuadTexture);
-		glBindVertexArray(vaoQuad);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
+			glUseProgram(shaderQuadTexture);
+			glBindVertexArray(vaoQuad);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+		}
 
 		guiRender();
 
@@ -717,6 +731,7 @@ void guiUpdate()
 	if (igCheckbox("Vsync", &vsync))
 		glfwSwapInterval(vsync);
 	igColorEdit3("Clear Color", clearColor, 0);
+	igCheckbox("Post Processing", &postProcessing);
 
 	if (igCollapsingHeader_BoolPtr("Lights", NULL, 0))
 	{
