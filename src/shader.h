@@ -7,7 +7,7 @@
 
 #include <glad/glad.h>
 
-#include <linmath.h>
+#include <cglm/cglm.h>
 
 void shaderCompile(GLuint* shader, GLenum shaderType, const char* shaderFile);
 

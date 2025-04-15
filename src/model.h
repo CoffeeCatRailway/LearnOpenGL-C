@@ -10,7 +10,7 @@
 #include <glad/glad.h>
 
 #include <array.h>
-#include <linmath.h>
+#include <cglm/cglm.h>
 
 #define VERTEX_STRIDE 8
 

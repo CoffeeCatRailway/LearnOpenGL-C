@@ -8,6 +8,7 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 
 # Include dependencies
 add_subdirectory(glfw)
+add_subdirectory(cglm EXCLUDE_FROM_ALL)
 include_directories(
         glfw/include
         cimgui
@@ -51,4 +52,5 @@ add_dependencies(${CMAKE_PROJECT_NAME} COPY_RESOURCES)
 
 target_link_libraries(${CMAKE_PROJECT_NAME}
         glfw ${GLFW_LIBRARIES} ${OPENGL_LIBRARIES}
+        cglm_headers
         cimgui)

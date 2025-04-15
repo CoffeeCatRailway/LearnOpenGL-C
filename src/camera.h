@@ -5,7 +5,7 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include <linmath.h>
+#include <cglm/cglm.h>
 
 #define GLOBAL_UP {0.f, 1.f, 0.f}
 
@@ -20,10 +20,10 @@ typedef struct camera_t
 	float pitchConstraint;
 } camera_t;
 
-camera_t* cameraCreate(const vec3 pos, const float yaw, const float pitch, const float pitchConstraint);
+camera_t* cameraCreate(const vec3 pos, float yaw, float pitch, float pitchConstraint);
 void cameraDelete(camera_t* camera);
 
-void cameraGetViewMatrix(camera_t* camera, mat4x4* view);
+void cameraGetViewMatrix(camera_t* camera, mat4* view);
 
 void cameraMoveForward(camera_t* camera, float delta);
 void cameraMoveBackward(camera_t* camera, float delta);

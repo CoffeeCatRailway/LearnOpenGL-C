@@ -3,6 +3,7 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "camera.h"
 #include "util.h"
@@ -24,53 +25,53 @@ void cameraDelete(camera_t* camera)
 	free(camera);
 }
 
-void cameraGetViewMatrix(camera_t* camera, mat4x4* view)
+void cameraGetViewMatrix(camera_t* camera, mat4* view)
 {
 	vec3 center;
-	vec3_add(center, camera->position, camera->front);
-	mat4x4_look_at(*view, camera->position, center, camera->up);
+	glm_vec3_add(camera->position, camera->front, center);
+	glm_lookat(camera->position, center, camera->up, *view);
 }
 
-void cameraMoveForward(camera_t* camera, float delta)
+void cameraMoveForward(camera_t* camera, const float delta)
 {
 	vec3 step;
-	vec3_scale(step, camera->front, delta);
-	vec3_add(camera->position, camera->position, step);
+	glm_vec3_scale(camera->front, delta, step);
+	glm_vec3_add(camera->position, step, camera->position);
 }
 
-void cameraMoveBackward(camera_t* camera, float delta)
+void cameraMoveBackward(camera_t* camera, const float delta)
 {
 	vec3 step;
-	vec3_scale(step, camera->front, delta);
-	vec3_sub(camera->position, camera->position, step);
+	glm_vec3_scale(camera->front, delta, step);
+	glm_vec3_sub(camera->position, step, camera->position);
 }
 
-void cameraMoveLeft(camera_t* camera, float delta)
+void cameraMoveLeft(camera_t* camera, const float delta)
 {
 	vec3 step;
-	vec3_scale(step, camera->right, delta);
-	vec3_sub(camera->position, camera->position, step);
+	glm_vec3_scale(camera->right, delta, step);
+	glm_vec3_sub(camera->position, step, camera->position);
 }
 
-void cameraMoveRight(camera_t* camera, float delta)
+void cameraMoveRight(camera_t* camera, const float delta)
 {
 	vec3 step;
-	vec3_scale(step, camera->right, delta);
-	vec3_add(camera->position, camera->position, step);
+	glm_vec3_scale(camera->right, delta, step);
+	glm_vec3_add(camera->position, step, camera->position);
 }
 
 void cameraMoveUp(camera_t* camera, float delta)
 {
 	vec3 step;
-	vec3_scale(step, camera->up, delta);
-	vec3_add(camera->position, camera->position, step);
+	glm_vec3_scale(camera->up, delta, step);
+	glm_vec3_add(camera->position, step, camera->position);
 }
 
 void cameraMoveDown(camera_t* camera, float delta)
 {
 	vec3 step;
-	vec3_scale(step, camera->up, delta);
-	vec3_sub(camera->position, camera->position, step);
+	glm_vec3_scale(camera->up, delta, step);
+	glm_vec3_sub(camera->position, step, camera->position);
 }
 
 void cameraProcessMouse(camera_t* camera, float xOffset, float yOffset)
@@ -95,9 +96,9 @@ void cameraUpdateVectors(camera_t* camera)
 	front[0] = cosf(RAD(camera->yaw)) * cosf(RAD(camera->pitch));
 	front[1] = sinf(RAD(camera->pitch));
 	front[2] = sinf(RAD(camera->yaw)) * cosf(RAD(camera->pitch));
-	vec3_norm(camera->front, front);
-	vec3_mul_cross(camera->right, camera->front, (vec3)GLOBAL_UP);
-	vec3_norm(camera->right, camera->right);
-	vec3_mul_cross(camera->up, camera->right, camera->front);
-	vec3_norm(camera->up, camera->up);
+	glm_vec3_normalize_to(front, camera->front);
+	glm_vec3_cross(camera->front, (vec3)GLOBAL_UP, camera->right);
+	glm_vec3_normalize(camera->right);
+	glm_vec3_cross(camera->right, camera->front, camera->up);
+	glm_vec3_normalize(camera->up);
 }

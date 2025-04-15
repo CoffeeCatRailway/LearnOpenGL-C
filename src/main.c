@@ -13,7 +13,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-#include <linmath.h>
+// #include <linmath.h>
+#include <cglm/cglm.h>
 
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #include <cimgui.h>
@@ -198,7 +199,7 @@ int main()
 		1.f, 1.f, 1.f, 1.f
 	};
 
-	const vec3 cubePositions[] = {
+	vec3 cubePositions[] = {
 		{0.f, 0.f, 0.f},
 		{-1.5f, -2.2f, 2.5f},
 		{2.4f, -.4f, -3.5f},
@@ -359,11 +360,11 @@ int main()
 	lights[2].specular[2] = 1.f;
 	lights[2].range = 200.f;
 
-	mat4x4 view, projection, identity;
+	mat4 view, projection, identity;
 
-	mat4x4_identity(identity);
-	mat4x4_identity(view);
-	mat4x4_identity(projection);
+	glm_mat4_identity(identity);
+	glm_mat4_identity(view);
+	glm_mat4_identity(projection);
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -381,8 +382,8 @@ int main()
 		lightColor[1] = sinf(currentFrame * .7f) * .5f + .5f;
 		lightColor[2] = sinf(currentFrame * 1.3f) * .5f + .5f;
 
-		vec3_scale(lights[2].ambient, lightColor, .5f);
-		vec3_scale(lights[2].diffuse, lightColor, .75f);
+		glm_vec3_scale(lightColor, .5f, lights[2].ambient);
+		glm_vec3_scale(lightColor, .75f, lights[2].diffuse);
 		memcpy(&lights[2].specular, &lightColor, sizeof(vec3));
 
 		//lights[2].position[0] = 1.2f * cosf(currentFrame);
@@ -408,7 +409,7 @@ int main()
 		glClearColor(clearColor[0], clearColor[1], clearColor[2], 1.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		mat4x4_perspective(projection, RAD(fov), (float) framebuffer->width / (float) framebuffer->height, .1f, 100.f);
+		glm_perspective(RAD(fov), (float) framebuffer->width / (float) framebuffer->height, .1f, 100.f, projection);
 		cameraGetViewMatrix(camera, &view);
 
 		glUseProgram(shaderLighting);
@@ -458,10 +459,10 @@ int main()
 		glBindTextureUnit(1, diffuseTexture);
 		// glBindTextureUnit(2, emissionMap);
 
-		mat4x4 model;
-		mat4x4_identity(model);
-		mat4x4_translate(model, 0.f, -8.f, 0.f);
-		mat4x4_scale_aniso(model, model, 10.f, 1.f, 10.f);
+		mat4 model;
+		glm_mat4_identity(model);
+		glm_translate(model, (vec3){0.f, -8.f, 0.f});
+		glm_scale(model, (vec3){10.f, 1.f, 10.f});
 		setUniformMatrix4fv(&shaderLighting, "u_model", (GLfloat*) model);
 		glBindVertexArray(meshCube->vao);
 		glDrawArrays(GL_TRIANGLES, 0, meshCube->numVertices);
@@ -469,13 +470,14 @@ int main()
 		glBindVertexArray(meshMonkey->vao);
 		for (int i = 0; i < 10; i++)
 		{
-			mat4x4_identity(model);
-			mat4x4_translate(model, cubePositions[i][0], cubePositions[i][1], cubePositions[i][2]);
+			glm_mat4_identity(model);
+			glm_translate(model, cubePositions[i]);
 			float angle = 20.f * (float) i;
 			if (i % 2 == 0)
 				angle += (float) glfwGetTime() * (40.f + (float) i * 40.f);
-			mat4x4_rotate(model, model, 1.f, .3f, .5f, RAD(angle));
-			mat4x4_scale_aniso(model, model, .5f, .5f, .5f);
+			glm_rotate(model, RAD(angle), (vec3){1.f, .3f, .5f});
+			// glm_mat4_scale(model, .5f);
+			glm_scale(model, (vec3){.5f, .5f, .5f});
 			setUniformMatrix4fv(&shaderLighting, "u_model", (GLfloat*) model);
 			glDrawArrays(GL_TRIANGLES, 0, meshMonkey->numVertices);
 		}
@@ -484,9 +486,10 @@ int main()
 		glBindTextureUnit(0, grassTexture);
 		glBindTextureUnit(1, grassSpecularTexture);
 
-		mat4x4_identity(model);
-		mat4x4_translate(model, 0.f, -6.f, 0.f);
-		mat4x4_scale_aniso(model, model, 2.f, 2.f, 2.f);
+		glm_mat4_identity(model);
+		glm_translate(model, (vec3){0.f, -6.f, 0.f});
+		// glm_mat4_scale(model, 2.f);
+		glm_scale(model, (vec3){2.f, 2.f, 2.f});
 		setUniformMatrix4fv(&shaderLighting, "u_model", (GLfloat*) model);
 		glBindVertexArray(vaoPlaneCross);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -499,10 +502,10 @@ int main()
 		setUniformMatrix4fv(&shaderSingleColor, "u_view", (GLfloat*) view);
 		setUniformMatrix4fv(&shaderSingleColor, "u_projection", (GLfloat*) projection);
 
-		mat4x4_identity(model);
-		mat4x4_translate(model, lights[2].position[0], lights[2].position[1], lights[2].position[2]);
-		// mat4x4_scale(model, model, .2f); // Doesn't work?
-		mat4x4_scale_aniso(model, model, .2f, .2f, .2f);
+		glm_mat4_identity(model);
+		glm_translate(model, lights[2].position);
+		// glm_mat4_scale(model, .2f);
+		glm_scale(model, (vec3){.2f, .2f, .2f});
 		setUniformMatrix4fv(&shaderSingleColor, "u_model", (GLfloat*) model);
 
 		glBindVertexArray(meshCube->vao);
