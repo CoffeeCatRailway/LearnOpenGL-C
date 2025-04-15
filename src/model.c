@@ -17,30 +17,33 @@ void processVertex(array_float_t** vertices, char* vertexData[3], vec3 v[], vec3
 
 mesh_t* meshCreate(const char* filename, const bool instanced)
 {
-	// array_float_t* vertices = loadOBJ(filename);
-
-	mesh_t* mesh = (mesh_t*)malloc(sizeof(mesh_t));
+	mesh_t* mesh = (mesh_t*) malloc(sizeof(mesh_t));
 	mesh->vertices = loadOBJ(filename);
 	mesh->numVertices = mesh->vertices->size / VERTEX_STRIDE;
 
 	// Create vao & vbo
-	glGenVertexArrays(1, &mesh->vao);
+	glCreateVertexArrays(1, &mesh->vao);
 	glBindVertexArray(mesh->vao);
 
-	glGenBuffers(1, &mesh->vbo);
+	glCreateBuffers(1, &mesh->vbo);
 
-	glBindBuffer(GL_ARRAY_BUFFER, mesh->vbo);
-	glBufferData(GL_ARRAY_BUFFER, mesh->numVertices * VERTEX_STRIDE * sizeof(float), mesh->vertices->array, GL_STATIC_DRAW);
+	glNamedBufferData(mesh->vao, mesh->numVertices * VERTEX_STRIDE * sizeof(float), mesh->vertices->array, GL_STATIC_DRAW);
+
+	glVertexArrayVertexBuffer(mesh->vao, 0, mesh->vbo, 0, VERTEX_STRIDE * sizeof(float));
 
 	// position
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, VERTEX_STRIDE * sizeof(float), (void*) 0);
+	glVertexArrayAttribFormat(mesh->vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
+	glVertexArrayAttribBinding(mesh->vao, 0, 0);
 	// normal
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, VERTEX_STRIDE * sizeof(float), (void*) (3 * sizeof(float)));
+	glVertexArrayAttribFormat(mesh->vao, 1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float));
+	glVertexArrayAttribBinding(mesh->vao, 1, 0);
 	// uv
-	glEnableVertexAttribArray(2);
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, VERTEX_STRIDE * sizeof(float), (void*) (6 * sizeof(float)));
+	glVertexArrayAttribFormat(mesh->vao, 2, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float));
+	glVertexArrayAttribBinding(mesh->vao, 2, 0);
+
+	glEnableVertexArrayAttrib(mesh->vao, 0);
+	glEnableVertexArrayAttrib(mesh->vao, 1);
+	glEnableVertexArrayAttrib(mesh->vao, 2);
 
 	if (instanced)
 	{
@@ -58,14 +61,13 @@ void meshDestroy(mesh_t* mesh)
 {
 	glDeleteVertexArrays(1, &mesh->vao);
 	glDeleteBuffers(1, &mesh->vbo);
-	// free(mesh->vertices);
 	array_float_delete(mesh->vertices);
 	free(mesh);
 }
 
 model_t* modelCreate(mesh_t* mesh)
 {
-	model_t* model = (model_t*)malloc(sizeof(model_t));
+	model_t* model = (model_t*) malloc(sizeof(model_t));
 	model->mesh = mesh;
 	model->position[0] = model->position[1] = model->position[2] = 0.f;
 	model->rotation[0] = model->rotation[1] = model->rotation[2] = 0.f;

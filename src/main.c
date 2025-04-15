@@ -23,6 +23,7 @@
 #include "shader.h"
 #include "camera.h"
 #include "model.h"
+#include "framebuffer.h"
 
 #define F_MAT_DIFFUSE 0x001
 #define F_MAT_SPECULAR 0x010
@@ -64,6 +65,7 @@ bool vsync = true;
 
 vec3 clearColor = {0.f, 0.f, 0.f};
 bool postProcessing = false;
+framebuffer_t* framebuffer;
 
 camera_t* camera;
 float fov = 45.f;
@@ -102,8 +104,8 @@ int main()
 		fprintf(stderr, "Failed to initialize GLFW\n");
 		exit(EXIT_FAILURE);
 	}
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	// #ifdef __APPLE__ // Who likes apple anyway?
 	// glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -215,37 +217,46 @@ int main()
 	const GLuint shaderQuadTexture = shaderCreate("resources/shaders/quad_texture.vert", "resources/shaders/quad_texture.frag");
 
 	GLuint vaoPlaneCross, vboPlaneCross;
-	glGenVertexArrays(1, &vaoPlaneCross);
-	glGenBuffers(1, &vboPlaneCross);
+	glCreateVertexArrays(1, &vaoPlaneCross);
+	glCreateBuffers(1, &vboPlaneCross);
 	glBindVertexArray(vaoPlaneCross);
-	glBindBuffer(GL_ARRAY_BUFFER, vboPlaneCross);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(planeCrossVertices), planeCrossVertices, GL_STATIC_DRAW);
+	glNamedBufferData(vboPlaneCross, sizeof(planeCrossVertices), planeCrossVertices, GL_STATIC_DRAW);
+
+	glVertexArrayVertexBuffer(vaoPlaneCross, 0, vboPlaneCross, 0, 8 * sizeof(float));
 
 	GLint positionLocation = glGetAttribLocation(shaderLighting, "i_position");
 	const GLint normalLocation = glGetAttribLocation(shaderLighting, "i_normal");
 	GLint uvLocation = glGetAttribLocation(shaderLighting, "i_uv");
 
-	glVertexAttribPointer(positionLocation, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*) 0);
-	glEnableVertexAttribArray(positionLocation);
-	glVertexAttribPointer(normalLocation, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*) (3 * sizeof(float)));
-	glEnableVertexAttribArray(normalLocation);
-	glVertexAttribPointer(uvLocation, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*) (6 * sizeof(float)));
-	glEnableVertexAttribArray(uvLocation);
+	glVertexArrayAttribFormat(vaoPlaneCross, positionLocation, 3, GL_FLOAT, GL_FALSE, 0);
+	glVertexArrayAttribBinding(vaoPlaneCross, positionLocation, 0);
+	glVertexArrayAttribFormat(vaoPlaneCross, normalLocation, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float));
+	glVertexArrayAttribBinding(vaoPlaneCross, normalLocation, 0);
+	glVertexArrayAttribFormat(vaoPlaneCross, uvLocation, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float));
+	glVertexArrayAttribBinding(vaoPlaneCross, uvLocation, 0);
+
+	glEnableVertexArrayAttrib(vaoPlaneCross, positionLocation);
+	glEnableVertexArrayAttrib(vaoPlaneCross, normalLocation);
+	glEnableVertexArrayAttrib(vaoPlaneCross, uvLocation);
 
 	GLuint vaoQuad, vboQuad;
-	glGenVertexArrays(1, &vaoQuad);
-	glGenBuffers(1, &vboQuad);
+	glCreateVertexArrays(1, &vaoQuad);
+	glCreateBuffers(1, &vboQuad);
 	glBindVertexArray(vaoQuad);
-	glBindBuffer(GL_ARRAY_BUFFER, vboQuad);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVerticies), quadVerticies, GL_STATIC_DRAW);
+	glNamedBufferData(vboQuad, sizeof(quadVerticies), quadVerticies, GL_STATIC_DRAW);
+
+	glVertexArrayVertexBuffer(vaoQuad, 0, vboQuad, 0, 4 * sizeof(float));
 
 	positionLocation = glGetAttribLocation(shaderQuadTexture, "i_position");
 	uvLocation = glGetAttribLocation(shaderQuadTexture, "i_uv");
 
-	glVertexAttribPointer(positionLocation, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*) 0);
-	glEnableVertexAttribArray(positionLocation);
-	glVertexAttribPointer(uvLocation, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*) (2 * sizeof(float)));
-	glEnableVertexAttribArray(uvLocation);
+	glVertexArrayAttribFormat(vaoQuad, positionLocation, 2, GL_FLOAT, GL_FALSE, 0);
+	glVertexArrayAttribBinding(vaoQuad, positionLocation, 0);
+	glVertexArrayAttribFormat(vaoQuad, uvLocation, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float));
+	glVertexArrayAttribBinding(vaoQuad, uvLocation, 0);
+
+	glEnableVertexArrayAttrib(vaoQuad, positionLocation);
+	glEnableVertexArrayAttrib(vaoQuad, uvLocation);
 
 	mesh_t* meshMonkey = meshCreate("resources/models/monkey.obj", false);
 	mesh_t* meshCube = meshCreate("resources/models/cube_fixed.obj", false);
@@ -255,7 +266,7 @@ int main()
 
 	// load textures
 	const GLuint diffuseTexture = loadTextureFromFile("resources/textures/brick_wall.jpg", GL_REPEAT, GL_REPEAT);
-	const GLuint specularTexture = loadTextureFromFile("resources/textures/white.png", GL_REPEAT, GL_REPEAT);
+	const GLuint specularTexture = loadTextureFromFile("resources/textures/brick_wall_specular.jpg", GL_REPEAT, GL_REPEAT);
 	// GLuint emissionMap = loadTextureFromFile("resources/textures/container2_emission.png");
 	const GLuint grassTexture = loadTextureFromFile("resources/textures/grass.png", GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 	const GLuint grassSpecularTexture = loadTextureFromFile("resources/textures/grass_specular.png", GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
@@ -271,28 +282,13 @@ int main()
 	setUniform1i(&shaderQuadTexture, "u_texture", 0);
 
 	// Framebuffer
-	GLuint framebuffer;
-	glGenFramebuffers(1, &framebuffer);
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-
-	GLuint textureColorbuffer;
-	glGenTextures(1, &textureColorbuffer);
-	glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, textureColorbuffer, 0);
-
-	GLuint rbo;
-	glGenRenderbuffers(1, &rbo);
-	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, WIDTH, HEIGHT);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		fprintf(stderr, "Framebuffer is not complete!\n");
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	framebuffer = framebufferCreate(WIDTH, HEIGHT);
+	if (!framebufferInit(framebuffer))
+	{
+		fprintf(stderr, "Failed to initialize framebuffer\n");
+		glfwTerminate();
+		exit(EXIT_FAILURE);
+	}
 
 	// Setup camera
 	// Initialize yaw to -90 since 0 results in a direction vector pointing to the right
@@ -369,7 +365,6 @@ int main()
 	mat4x4_identity(view);
 	mat4x4_identity(projection);
 
-	// int width, height;
 	while (!glfwWindowShouldClose(window))
 	{
 		// Update/Input
@@ -401,7 +396,8 @@ int main()
 		// Render
 		if (postProcessing)
 		{
-			glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+			framebufferClear(framebuffer);
+			framebufferBindToDraw(framebuffer);
 			glEnable(GL_DEPTH_TEST);
 		} else
 		{
@@ -412,8 +408,7 @@ int main()
 		glClearColor(clearColor[0], clearColor[1], clearColor[2], 1.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// glfwGetFramebufferSize(window, &width, &height);
-		mat4x4_perspective(projection, RAD(fov), (float) WIDTH / (float) HEIGHT, .1f, 100.f);
+		mat4x4_perspective(projection, RAD(fov), (float) framebuffer->width / (float) framebuffer->height, .1f, 100.f);
 		cameraGetViewMatrix(camera, &view);
 
 		glUseProgram(shaderLighting);
@@ -459,14 +454,9 @@ int main()
 		setUniformMatrix4fv(&shaderLighting, "u_projection", (GLfloat*) projection);
 
 		// Render the cube
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, diffuseTexture);
-
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, specularTexture);
-
-		// glActiveTexture(GL_TEXTURE2);
-		// glBindTexture(GL_TEXTURE_2D, emissionMap);
+		glBindTextureUnit(0, diffuseTexture);
+		glBindTextureUnit(1, diffuseTexture);
+		// glBindTextureUnit(2, emissionMap);
 
 		mat4x4 model;
 		mat4x4_identity(model);
@@ -487,16 +477,12 @@ int main()
 			mat4x4_rotate(model, model, 1.f, .3f, .5f, RAD(angle));
 			mat4x4_scale_aniso(model, model, .5f, .5f, .5f);
 			setUniformMatrix4fv(&shaderLighting, "u_model", (GLfloat*) model);
-			// glDrawArrays(GL_TRIANGLES, 0, 36);
 			glDrawArrays(GL_TRIANGLES, 0, meshMonkey->numVertices);
 		}
 
 		// glDisable(GL_DEPTH_TEST);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, grassTexture);
-
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, grassSpecularTexture);
+		glBindTextureUnit(0, grassTexture);
+		glBindTextureUnit(1, grassSpecularTexture);
 
 		mat4x4_identity(model);
 		mat4x4_translate(model, 0.f, -6.f, 0.f);
@@ -524,16 +510,17 @@ int main()
 
 		if (postProcessing)
 		{
+			framebufferCopyToDefault(framebuffer);
+
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 			glDisable(GL_DEPTH_TEST);
 
 			glClearColor(1.f, 1.f, 1.f, 1.f);
-			glClear(GL_COLOR_BUFFER_BIT);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 			glUseProgram(shaderQuadTexture);
 			glBindVertexArray(vaoQuad);
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
+			glBindTextureUnit(0, framebuffer->colorTex);
 			glDrawArrays(GL_TRIANGLES, 0, 6);
 		}
 
@@ -567,8 +554,7 @@ int main()
 	glDeleteTextures(1, &grassTexture);
 	glDeleteTextures(1, &grassSpecularTexture);
 
-	glDeleteRenderbuffers(1, &rbo);
-	glDeleteFramebuffers(1, &framebuffer);
+	framebufferDestroy(framebuffer);
 
 	glfwDestroyWindow(window);
 
@@ -582,6 +568,7 @@ void errorCallback(int error, const char* description)
 
 void framebufferSizeCallback(GLFWwindow* window, const int width, const int height)
 {
+	framebufferResize(framebuffer, width, height);
 	glViewport(0, 0, width, height);
 	//	printf("Set viewport size to (%d,%d)\n", width, height);
 }
@@ -735,6 +722,7 @@ void guiUpdate()
 	if (igCheckbox("Vsync", &vsync))
 		glfwSwapInterval(vsync);
 
+	igSeparator();
 	if (igCollapsingHeader_BoolPtr("Camera", NULL, 0))
 	{
 		igColorEdit3("Clear Color", clearColor, 0);

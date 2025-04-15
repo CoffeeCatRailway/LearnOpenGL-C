@@ -8,7 +8,7 @@
 #include "shader.h"
 #include "util.h"
 
-void shaderCompile(GLuint* shader, GLenum shaderType, const char* shaderFilePath)
+void shaderCompile(GLuint* shader, const GLenum shaderType, const char* shaderFilePath)
 {
 	*shader = glCreateShader(shaderType);
 	if (*shader == 0)
@@ -62,57 +62,68 @@ GLuint shaderCreate(const char* vertexFile, const char* fragmentFile)
 	return shaderProgram;
 }
 
-void setUniform1i(const GLuint* shader, const char* name, GLint x)
+void setUniform1i(const GLuint* shader, const char* name, const GLint x)
 {
-	glUniform1i(glGetUniformLocation(*shader, name), x);
+	// glUniform1i(glGetUniformLocation(*shader, name), x);
+	glProgramUniform1i(*shader, glGetUniformLocation(*shader, name), x);
 }
 
-void setUniform1ui(const GLuint* shader, const char* name, GLuint x)
+void setUniform1ui(const GLuint* shader, const char* name, const GLuint x)
 {
-	glUniform1ui(glGetUniformLocation(*shader, name), x);
+	// glUniform1ui(glGetUniformLocation(*shader, name), x);
+	glProgramUniform1ui(*shader, glGetUniformLocation(*shader, name), x);
 }
 
-void setUniform1f(const GLuint* shader, const char* name, GLfloat x)
+void setUniform1f(const GLuint* shader, const char* name, const GLfloat x)
 {
-	glUniform1f(glGetUniformLocation(*shader, name), x);
+	// glUniform1f(glGetUniformLocation(*shader, name), x);
+	glProgramUniform1f(*shader, glGetUniformLocation(*shader, name), x);
 }
 
 void setUniform1fv(const GLuint* shader, const char* name, const GLfloat* value)
 {
-	glUniform1fv(glGetUniformLocation(*shader, name), 1, value);
+	// glUniform1fv(glGetUniformLocation(*shader, name), 1, value);
+	glProgramUniform1fv(*shader, glGetUniformLocation(*shader, name), 1, value);
 }
 
-void setUniform2f(const GLuint* shader, const char* name, GLfloat x, GLfloat y)
+void setUniform2f(const GLuint* shader, const char* name, const GLfloat x, const GLfloat y)
 {
-	glUniform2f(glGetUniformLocation(*shader, name), x, y);
+	// glUniform2f(glGetUniformLocation(*shader, name), x, y);
+	glProgramUniform2f(*shader, glGetUniformLocation(*shader, name), x, y);
 }
 
 void setUniform2fv(const GLuint* shader, const char* name, vec2 value)
 {
-	glUniform2fv(glGetUniformLocation(*shader, name), 1, (const GLfloat*) value);
+	// glUniform2fv(glGetUniformLocation(*shader, name), 1, (const GLfloat*) value);
+	glProgramUniform2fv(*shader, glGetUniformLocation(*shader, name), 1, (const GLfloat*) value);
 }
 
-void setUniform3f(const GLuint* shader, const char* name, GLfloat x, GLfloat y, GLfloat z)
+void setUniform3f(const GLuint* shader, const char* name, const GLfloat x, const GLfloat y, const GLfloat z)
 {
-	glUniform3f(glGetUniformLocation(*shader, name), x, y, z);
+	// glUniform3f(glGetUniformLocation(*shader, name), x, y, z);
+	glProgramUniform3f(*shader, glGetUniformLocation(*shader, name), x, y, z);
 }
 
 void setUniform3fv(const GLuint* shader, const char* name, vec3 value)
 {
-	glUniform3fv(glGetUniformLocation(*shader, name), 1, (const GLfloat*) value);
+	// glUniform3fv(glGetUniformLocation(*shader, name), 1, (const GLfloat*) value);
+	glProgramUniform3fv(*shader, glGetUniformLocation(*shader, name), 1, (const GLfloat*) value);
 }
 
-void setUniform4f(const GLuint* shader, const char* name, GLfloat x, GLfloat y, GLfloat z, GLfloat w)
+void setUniform4f(const GLuint* shader, const char* name, const GLfloat x, const GLfloat y, const GLfloat z, const GLfloat w)
 {
-	glUniform4f(glGetUniformLocation(*shader, name), x, y, z, w);
+	// glUniform4f(glGetUniformLocation(*shader, name), x, y, z, w);
+	glProgramUniform4f(*shader, glGetUniformLocation(*shader, name), x, y, z, w);
 }
 
 void setUniform4fv(const GLuint* shader, const char* name, vec4 value)
 {
-	glUniform4fv(glGetUniformLocation(*shader, name), 1, (const GLfloat*) value);
+	// glUniform4fv(glGetUniformLocation(*shader, name), 1, (const GLfloat*) value);
+	glProgramUniform4fv(*shader, glGetUniformLocation(*shader, name), 1, (const GLfloat*) value);
 }
 
 void setUniformMatrix4fv(const GLuint* shader, const char* name, const GLfloat* value)
 {
-	glUniformMatrix4fv(glGetUniformLocation(*shader, name), 1, GL_FALSE, value);
+	// glUniformMatrix4fv(glGetUniformLocation(*shader, name), 1, GL_FALSE, value);
+	glProgramUniformMatrix4fv(*shader, glGetUniformLocation(*shader, name), 1, GL_FALSE, value);
 }

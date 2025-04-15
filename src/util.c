@@ -41,7 +41,7 @@ char* readFile(const char* filename)
 GLuint loadTextureFromFile(const char* path, const GLint wrapS, const GLint wrapT)
 {
 	GLuint textureId;
-	glGenTextures(1, &textureId);
+	glCreateTextures(GL_TEXTURE_2D, 1, &textureId);
 
 	int width, height, nChannels;
 	unsigned char* imageData = stbi_load(path, &width, &height, &nChannels, 0);
@@ -52,30 +52,27 @@ GLuint loadTextureFromFile(const char* path, const GLint wrapS, const GLint wrap
 		{
 			case 1:
 				format = GL_RED;
-			break;
+				break;
 			case 3:
 				format = GL_RGB;
-			break;
+				break;
 			default:
 				format = GL_RGBA;
-			break;
+				break;
 		}
 
-		glBindTexture(GL_TEXTURE_2D, textureId); // All upcoming GL_TEXTURE_2D operations now effect the texture object
-		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, imageData);
-		glGenerateMipmap(GL_TEXTURE_2D);
+		glTextureParameteri(textureId, GL_TEXTURE_WRAP_S, wrapS);
+		glTextureParameteri(textureId, GL_TEXTURE_WRAP_T, wrapT);
+		glTextureParameteri(textureId, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTextureParameteri(textureId, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-		// Set wrapping parameters
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapS);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapT);
-		// Set filtering parameters
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		// Look into `internalFormat`
+		glTextureStorage2D(textureId, 1, GL_RGBA8, width, height);
+		glTextureSubImage2D(textureId, 0, 0, 0, width, height, format, GL_UNSIGNED_BYTE, imageData);
+		glGenerateTextureMipmap(textureId);
 		printf("Texture '%s' loaded\n", path);
 	} else
-	{
 		fprintf(stderr, "Failed to load texture: %s\n", path);
-	}
 	stbi_image_free(imageData);
 
 	return textureId;

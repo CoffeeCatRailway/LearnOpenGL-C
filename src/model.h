@@ -30,7 +30,7 @@ typedef struct model_t
 	GLuint renderMethod;
 } model_t;
 
-mesh_t* meshCreate(const char* filename, const bool instanced);
+mesh_t* meshCreate(const char* filename, bool instanced);
 void meshDestroy(mesh_t* mesh);
 
 model_t* modelCreate(mesh_t* mesh);

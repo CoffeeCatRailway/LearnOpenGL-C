@@ -30,7 +30,9 @@ set(SOURCE_FILES src/main.c
         src/camera.c
         src/camera.h
         src/model.c
-        src/model.h)
+        src/model.h
+        src/framebuffer.c
+        src/framebuffer.h)
 
 add_library(cimgui STATIC ${CIMGUI_SOURCES})
 add_compile_definitions("IMGUI_IMPL_OPENGL_LOADED_GL3W")
