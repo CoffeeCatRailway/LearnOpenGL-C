@@ -33,6 +33,8 @@ struct Light
 	float quadratic;
 };
 
+uniform samplerCube u_skybox;
+
 uniform vec3 u_viewPos;
 uniform Material u_material;
 
@@ -66,8 +68,12 @@ void main()
 	vec4 matSpecular = texture(u_material.specularTex, v_uv);
 
 	// global properties
-	vec3 norm = normalize(v_normal);
 	vec3 viewDir = normalize(u_viewPos - v_fragPos);
+
+	vec3 I = normalize(v_fragPos - u_viewPos);
+	vec3 R = refract(I, v_normal, 1. / 1.33);
+//	vec3 R = reflect(I, v_normal);
+	vec3 skyColor = texture(u_skybox, R).rgb;
 	
 	// calculate lights
 	vec3 result = vec3(0.);
@@ -77,18 +83,23 @@ void main()
 		if (!light.enable)
 			continue;
 		if (light.mode == F_LHT_DIRECT)
-			result += calcDirectLight(light, norm, viewDir, matDiffuse.rgb, matSpecular.rgb);
+			result += calcDirectLight(light, v_normal, viewDir, matDiffuse.rgb, matSpecular.rgb);
 		
 		if (light.mode == F_LHT_POINT)
-			result += calcPointLight(light, norm, v_fragPos, viewDir, matDiffuse.rgb, matSpecular.rgb);
+			result += calcPointLight(light, v_normal, v_fragPos, viewDir, matDiffuse.rgb, matSpecular.rgb);
 		
 		if (light.mode == F_LHT_SPOT)
-			result += calcSpotLight(light, norm, v_fragPos, viewDir, matDiffuse.rgb, matSpecular.rgb);
+			result += calcSpotLight(light, v_normal, v_fragPos, viewDir, matDiffuse.rgb, matSpecular.rgb);
 	}
 
 //	float depth = linearizeDepth(gl_FragCoord.z) / far;
 //	vec4 depthVec = vec4(pow(depth, 1.4));
-//	result = norm * .5 + .5;
+//	result = v_normal * .5 + .5;
+
+//	float average = (result.x + result.y + result.z) / 3.;
+//	result = mix(result, skyColor, average);
+	result = skyColor;
+
 	FragColor = vec4(result, matDiffuse.a);// * (1. - depthVec) + depthVec;
 }
 

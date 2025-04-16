@@ -8,13 +8,13 @@
 #include "shader.h"
 #include "util.h"
 
-void shaderCompile(GLuint* shader, const GLenum shaderType, const char* shaderFilePath)
+void shaderCompile(GLuint* shader, const GLenum shaderType, const char* shaderFile)
 {
 	*shader = glCreateShader(shaderType);
 	if (*shader == 0)
-		fprintf(stderr, "Could not load shader: %s\n", shaderFilePath);
+		fprintf(stderr, "Could not load shader: %s\n", shaderFile);
 
-	const char* shaderSource = readFile(shaderFilePath);
+	const char* shaderSource = readFile(shaderFile);
 	glShaderSource(*shader, 1, &shaderSource, NULL);
 	glCompileShader(*shader);
 //	printf("%s\n", shaderSource);
@@ -25,7 +25,7 @@ void shaderCompile(GLuint* shader, const GLenum shaderType, const char* shaderFi
 
 	if (isCompiled == GL_FALSE)
 	{
-		fprintf(stderr, "Shader compile error: %s\n", shaderFilePath);
+		fprintf(stderr, "Shader compile error: %s\n", shaderFile);
 
 		GLint logSize = 0;
 		glGetShaderiv(*shader, GL_INFO_LOG_LENGTH, &logSize);
@@ -36,19 +36,23 @@ void shaderCompile(GLuint* shader, const GLenum shaderType, const char* shaderFi
 		glDeleteShader(*shader);
 		exit(-1);
 	}
-	printf("Shader '%s' compile success\n", shaderFilePath);
+	printf("Shader '%s' compile success\n", shaderFile);
 }
 
 //void createShader(GLuint* shaderProgram)
-GLuint shaderCreate(const char* vertexFile, const char* fragmentFile)
+GLuint shaderCreate(const char* vertexFile, const char* fragmentFile, const char* geometryFile)
 {
-	GLuint vertexShader, fragmentShader;
+	GLuint vertexShader, fragmentShader, geometryShader;
 	shaderCompile(&vertexShader, GL_VERTEX_SHADER, vertexFile);
 	shaderCompile(&fragmentShader, GL_FRAGMENT_SHADER, fragmentFile);
+	if (geometryFile)
+		shaderCompile(&geometryShader, GL_GEOMETRY_SHADER, geometryFile);
 
 	const GLuint shaderProgram = glCreateProgram();
 	glAttachShader(shaderProgram, vertexShader);
 	glAttachShader(shaderProgram, fragmentShader);
+	if (geometryFile)
+		glAttachShader(shaderProgram, geometryShader);
 
 	glBindFragDataLocation(shaderProgram, 0, "FragColor");
 
@@ -57,6 +61,8 @@ GLuint shaderCreate(const char* vertexFile, const char* fragmentFile)
 
 	glDeleteShader(vertexShader);
 	glDeleteShader(fragmentShader);
+	if (geometryFile)
+		glDeleteShader(geometryShader);
 
 	printf("Shader %d linked\n", shaderProgram);
 	return shaderProgram;

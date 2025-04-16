@@ -198,6 +198,51 @@ int main()
 		1.f, 1.f, 1.f, 1.f
 	};
 
+	const float skyboxVertices[] = {
+		// positions
+		-1.0f,  1.0f, -1.0f,
+		-1.0f, -1.0f, -1.0f,
+		 1.0f, -1.0f, -1.0f,
+		 1.0f, -1.0f, -1.0f,
+		 1.0f,  1.0f, -1.0f,
+		-1.0f,  1.0f, -1.0f,
+
+		-1.0f, -1.0f,  1.0f,
+		-1.0f, -1.0f, -1.0f,
+		-1.0f,  1.0f, -1.0f,
+		-1.0f,  1.0f, -1.0f,
+		-1.0f,  1.0f,  1.0f,
+		-1.0f, -1.0f,  1.0f,
+
+		 1.0f, -1.0f, -1.0f,
+		 1.0f, -1.0f,  1.0f,
+		 1.0f,  1.0f,  1.0f,
+		 1.0f,  1.0f,  1.0f,
+		 1.0f,  1.0f, -1.0f,
+		 1.0f, -1.0f, -1.0f,
+
+		-1.0f, -1.0f,  1.0f,
+		-1.0f,  1.0f,  1.0f,
+		 1.0f,  1.0f,  1.0f,
+		 1.0f,  1.0f,  1.0f,
+		 1.0f, -1.0f,  1.0f,
+		-1.0f, -1.0f,  1.0f,
+
+		-1.0f,  1.0f, -1.0f,
+		 1.0f,  1.0f, -1.0f,
+		 1.0f,  1.0f,  1.0f,
+		 1.0f,  1.0f,  1.0f,
+		-1.0f,  1.0f,  1.0f,
+		-1.0f,  1.0f, -1.0f,
+
+		-1.0f, -1.0f, -1.0f,
+		-1.0f, -1.0f,  1.0f,
+		 1.0f, -1.0f, -1.0f,
+		 1.0f, -1.0f, -1.0f,
+		-1.0f, -1.0f,  1.0f,
+		 1.0f, -1.0f,  1.0f
+	};
+
 	vec3 cubePositions[] = {
 		{0.f, 0.f, 0.f},
 		{-1.5f, -2.2f, 2.5f},
@@ -212,9 +257,13 @@ int main()
 	};
 
 	// Build & compile shaders
-	const GLuint shaderLighting = shaderCreate("resources/shaders/light.vert", "resources/shaders/light_multi.frag");
-	const GLuint shaderSingleColor = shaderCreate("resources/shaders/single_color.vert", "resources/shaders/single_color.frag");
-	const GLuint shaderQuadTexture = shaderCreate("resources/shaders/quad_texture.vert", "resources/shaders/quad_texture.frag");
+	const GLuint shaderLighting = shaderCreate("resources/shaders/light.vert", "resources/shaders/light_multi.frag", NULL);
+	const GLuint shaderSingleColor = shaderCreate("resources/shaders/single_color.vert", "resources/shaders/single_color.frag", NULL);
+	const GLuint shaderQuadTexture = shaderCreate("resources/shaders/quad_texture.vert", "resources/shaders/quad_texture.frag", NULL);
+	const GLuint shaderSkybox = shaderCreate("resources/shaders/skybox.vert", "resources/shaders/skybox.frag", NULL);
+
+	const GLuint shaderGeomExplode = shaderCreate("resources/shaders/geom_explode.vert", "resources/shaders/geom_explode.frag", "resources/shaders/geom_explode.geom");
+	const GLuint shaderGeomNormals = shaderCreate("resources/shaders/geom_normal_visual.vert", "resources/shaders/geom_normal_visual.frag", "resources/shaders/geom_normal_visual.geom");
 
 	GLuint vaoPlaneCross, vboPlaneCross;
 	glCreateVertexArrays(1, &vaoPlaneCross);
@@ -258,6 +307,21 @@ int main()
 	glEnableVertexArrayAttrib(vaoQuad, positionLocation);
 	glEnableVertexArrayAttrib(vaoQuad, uvLocation);
 
+	GLuint vaoSkybox, vboSkybox;
+	glCreateVertexArrays(1, &vaoSkybox);
+	glCreateBuffers(1, &vboSkybox);
+	glBindVertexArray(vaoSkybox);
+	glNamedBufferData(vaoSkybox, sizeof(skyboxVertices), skyboxVertices, GL_STATIC_DRAW);
+
+	glVertexArrayVertexBuffer(vaoSkybox, 0, vboSkybox, 0, 3 * sizeof(float));
+
+	positionLocation = glGetAttribLocation(shaderSkybox, "i_position");
+
+	glVertexArrayAttribFormat(vaoSkybox, positionLocation, 3, GL_FLOAT, GL_FALSE, 0);
+	glVertexArrayAttribBinding(vaoSkybox, positionLocation, 0);
+
+	glEnableVertexArrayAttrib(vaoSkybox, positionLocation);
+
 	mesh_t* meshMonkey = meshCreate("resources/models/monkey.obj", false);
 	mesh_t* meshCube = meshCreate("resources/models/cube_fixed.obj", false);
 
@@ -271,15 +335,34 @@ int main()
 	const GLuint grassTexture = loadTextureFromFile("resources/textures/grass.png", GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 	const GLuint grassSpecularTexture = loadTextureFromFile("resources/textures/grass_specular.png", GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 
+	stbi_set_flip_vertically_on_load(0);
+	const char* faces[] = {
+		"resources/textures/skybox/right.jpg",
+		"resources/textures/skybox/left.jpg",
+		"resources/textures/skybox/top.jpg",
+		"resources/textures/skybox/bottom.jpg",
+		"resources/textures/skybox/front.jpg",
+		"resources/textures/skybox/back.jpg",
+	};
+	const GLuint skyboxTexture = loadCubeMapTextureFromFiles(faces, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+	stbi_set_flip_vertically_on_load(1);
+
 	// Set shader uniforms
 	glUseProgram(shaderLighting);
 	// setUniform1i(&shaderLighting, "u_material.flags", F_MAT_DIFFUSE | F_MAT_SPECULAR);
 	setUniform1i(&shaderLighting, "u_material.diffuseTex", 0);
 	setUniform1i(&shaderLighting, "u_material.specularTex", 1);
 	setUniform1f(&shaderLighting, "u_material.shininess", 64.f);
+	setUniform1i(&shaderLighting, "u_skybox", 2);
 
 	glUseProgram(shaderQuadTexture);
 	setUniform1i(&shaderQuadTexture, "u_texture", 0);
+
+	glUseProgram(shaderSkybox);
+	setUniform1i(&shaderSkybox, "u_texture", 0);
+
+	glUseProgram(shaderGeomExplode);
+	setUniform1i(&shaderGeomExplode, "u_texture", 0);
 
 	// Framebuffer
 	framebuffer = framebufferCreate(WIDTH, HEIGHT);
@@ -411,6 +494,7 @@ int main()
 		glm_perspective(RAD(camera->fov), (float) framebuffer->width / (float) framebuffer->height, camera->near, camera->far, projection);
 		cameraGetViewMatrix(camera, &view);
 
+		// lights & models affected by lights
 		glUseProgram(shaderLighting);
 		for (int i = 0; i < MAX_LIGHTS; i++)
 		{
@@ -453,10 +537,11 @@ int main()
 		setUniformMatrix4fv(&shaderLighting, "u_view", (GLfloat*) view);
 		setUniformMatrix4fv(&shaderLighting, "u_projection", (GLfloat*) projection);
 
-		// Render the cube
+		// Cube
 		glBindTextureUnit(0, diffuseTexture);
-		glBindTextureUnit(1, diffuseTexture);
+		glBindTextureUnit(1, specularTexture);
 		// glBindTextureUnit(2, emissionMap);
+		glBindTextureUnit(2, skyboxTexture);
 
 		mat4 model;
 		glm_mat4_identity(model);
@@ -473,7 +558,7 @@ int main()
 			glm_translate(model, cubePositions[i]);
 			float angle = 20.f * (float) i;
 			if (i % 2 == 0)
-				angle += (float) glfwGetTime() * (40.f + (float) i * 40.f);
+				angle += currentFrame * (40.f + (float) i * 40.f);
 			glm_rotate(model, RAD(angle), (vec3){1.f, .3f, .5f});
 			// glm_mat4_scale(model, .5f);
 			glm_scale(model, (vec3){.5f, .5f, .5f});
@@ -481,20 +566,36 @@ int main()
 			glDrawArrays(GL_TRIANGLES, 0, meshMonkey->numVertices);
 		}
 
-		// glDisable(GL_DEPTH_TEST);
-		glBindTextureUnit(0, grassTexture);
-		glBindTextureUnit(1, grassSpecularTexture);
+		// Exploding monkey
+		glUseProgram(shaderGeomExplode);
+		glBindTextureUnit(0, diffuseTexture);
+		setUniform1f(&shaderGeomExplode, "u_time", currentFrame);
 
+		setUniformMatrix4fv(&shaderGeomExplode, "u_projection", (GLfloat*) projection);
+		setUniformMatrix4fv(&shaderGeomExplode, "u_view", (GLfloat*) view);
+
+		glBindVertexArray(meshMonkey->vao);
 		glm_mat4_identity(model);
-		glm_translate(model, (vec3){0.f, -6.f, 0.f});
-		// glm_mat4_scale(model, 2.f);
-		glm_scale(model, (vec3){2.f, 2.f, 2.f});
-		setUniformMatrix4fv(&shaderLighting, "u_model", (GLfloat*) model);
-		glBindVertexArray(vaoPlaneCross);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		// glEnable(GL_DEPTH_TEST);
+		glm_translate(model, (vec3){-5.f, 10.f, 0.f});
+		setUniformMatrix4fv(&shaderGeomExplode, "u_model", (GLfloat*) model);
+		glDrawArrays(GL_TRIANGLES, 0, meshMonkey->numVertices);
 
-		// Draw lamp
+		// Spiky monkey
+		glUseProgram(shaderLighting);
+		glBindVertexArray(meshMonkey->vao);
+		glm_mat4_identity(model);
+		glm_translate(model, (vec3){5.f, 10.f, 0.f});
+		glm_rotate(model, currentFrame, (vec3){0.f, 1.f, 0.f});
+		setUniformMatrix4fv(&shaderLighting, "u_model", (GLfloat*) model);
+		glDrawArrays(GL_TRIANGLES, 0, meshMonkey->numVertices);
+
+		glUseProgram(shaderGeomNormals);
+		setUniformMatrix4fv(&shaderGeomNormals, "u_projection", (GLfloat*) projection);
+		setUniformMatrix4fv(&shaderGeomNormals, "u_view", (GLfloat*) view);
+		setUniformMatrix4fv(&shaderGeomNormals, "u_model", (GLfloat*) model);
+		glDrawArrays(GL_TRIANGLES, 0, meshMonkey->numVertices);
+
+		// Lamp
 		glUseProgram(shaderSingleColor);
 		setUniform3fv(&shaderSingleColor, "u_color", lightColor);
 
@@ -507,8 +608,39 @@ int main()
 		glm_scale(model, (vec3){.2f, .2f, .2f});
 		setUniformMatrix4fv(&shaderSingleColor, "u_model", (GLfloat*) model);
 
+		// skybox
+		glDepthFunc(GL_LEQUAL);
+		glUseProgram(shaderSkybox);
+		mat4 skyboxView;
+		glm_mat4_copy(view, skyboxView);
+		mat3 viewMat3;
+		glm_mat4_pick3(skyboxView, viewMat3);
+		glm_mat4_identity(skyboxView);
+		glm_mat4_ins3(viewMat3, skyboxView);
+		setUniformMatrix4fv(&shaderSkybox, "u_view", (GLfloat*) skyboxView);
+		setUniformMatrix4fv(&shaderSkybox, "u_projection", (GLfloat*) projection);
+
+		glBindTextureUnit(0, skyboxTexture);
+		glBindVertexArray(vaoSkybox);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+		glBindVertexArray(0);
+		glDepthFunc(GL_LESS);
+
 		glBindVertexArray(meshCube->vao);
 		glDrawArrays(GL_TRIANGLES, 0, meshCube->numVertices);
+
+		// grass
+		glUseProgram(shaderLighting);
+		glBindTextureUnit(0, grassTexture);
+		glBindTextureUnit(1, grassSpecularTexture);
+
+		glm_mat4_identity(model);
+		glm_translate(model, (vec3){0.f, -6.f, 0.f});
+		// glm_mat4_scale(model, 2.f);
+		glm_scale(model, (vec3){2.f, 2.f, 2.f});
+		setUniformMatrix4fv(&shaderLighting, "u_model", (GLfloat*) model);
+		glBindVertexArray(vaoPlaneCross);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
 
 		if (postProcessing)
 		{
@@ -543,18 +675,27 @@ int main()
 	glDeleteVertexArrays(1, &vaoQuad);
 	glDeleteBuffers(1, &vboQuad);
 
+	glDeleteVertexArrays(1, &vaoSkybox);
+	glDeleteBuffers(1, &vboSkybox);
+
 	meshDestroy(meshMonkey);
 	meshDestroy(meshCube);
 
 	glDeleteProgram(shaderLighting);
 	glDeleteProgram(shaderSingleColor);
 	glDeleteProgram(shaderQuadTexture);
+	glDeleteProgram(shaderSkybox);
+
+	glDeleteProgram(shaderGeomExplode);
+	glDeleteProgram(shaderGeomNormals);
 
 	glDeleteTextures(1, &diffuseTexture);
 	glDeleteTextures(1, &specularTexture);
 
 	glDeleteTextures(1, &grassTexture);
 	glDeleteTextures(1, &grassSpecularTexture);
+
+	glDeleteTextures(1, &skyboxTexture);
 
 	framebufferDestroy(framebuffer);
 

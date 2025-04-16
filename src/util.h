@@ -8,9 +8,11 @@
 #include <glad/glad.h>
 
 #define PI 3.14159265358979323846
-#define RAD(n) n * PI / 180.0
+#define RAD(n) (n * PI / 180.0)
 
 char* readFile(const char* filename);
-GLuint loadTextureFromFile(const char* path, const GLint wrapS, const GLint wrapT);
+
+GLuint loadTextureFromFile(const char* path, GLint wrapS, GLint wrapT);
+GLuint loadCubeMapTextureFromFiles(const char* faces[], GLint wrapS, GLint wrapT, GLint wrapR);
 
 #endif //UTIL_H
