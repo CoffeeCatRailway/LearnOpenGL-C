@@ -7,7 +7,7 @@
 
 #include <cglm/cglm.h>
 
-#define GLOBAL_UP {0.f, 1.f, 0.f}
+#define GLOBAL_UP (vec3){0.f, 1.f, 0.f}
 
 typedef struct camera_t
 {
@@ -15,12 +15,17 @@ typedef struct camera_t
 	vec3 front;
 	vec3 right;
 	vec3 up;
+
 	float yaw;
 	float pitch;
 	float pitchConstraint;
+
+	float fov;
+	float near;
+	float far;
 } camera_t;
 
-camera_t* cameraCreate(const vec3 pos, float yaw, float pitch, float pitchConstraint);
+camera_t* cameraCreate(const vec3 pos, float yaw, float pitch, float pitchConstraint, float fov, float near, float far);
 void cameraDelete(camera_t* camera);
 
 void cameraGetViewMatrix(camera_t* camera, mat4* view);

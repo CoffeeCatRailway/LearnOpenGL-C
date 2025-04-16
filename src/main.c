@@ -69,7 +69,6 @@ bool postProcessing = false;
 framebuffer_t* framebuffer;
 
 camera_t* camera;
-float fov = 45.f;
 bool mouseCaptured = false;
 float cameraSpeed = 7.f;
 float mouseSensitivity = .1f;
@@ -293,20 +292,20 @@ int main()
 
 	// Setup camera
 	// Initialize yaw to -90 since 0 results in a direction vector pointing to the right
-	camera = cameraCreate((vec3){0.f, 0.f, 10.f}, -90.f, 0.f, 89.f);
+	camera = cameraCreate((vec3){0.f, 0.f, 10.f}, -90.f, 0.f, 89.f, 45.f, .1f, 100.f);
 
 	// Sun Light
 	lights[0].enable = true;
 	strcpy(lights[0].name, "Sun");
 	lights[0].mode = F_LHT_DIRECT;
-	lights[0].position[0] = 0.f;
-	lights[0].position[1] = 0.f;
-	lights[0].position[2] = 0.f;
-	lights[0].direction[0] = -1.f;
+	lights[0].position[0] = -10.f;
+	lights[0].position[1] = 10.f;
+	lights[0].position[2] = -10.f;
+	lights[0].direction[0] = 1.f;
 	lights[0].direction[1] = -1.f;
-	lights[0].direction[2] = -1.f;
-	lights[0].cutOffInner = 0.f;
-	lights[0].cutOffOuter = 0.f;
+	lights[0].direction[2] = 1.f;
+	lights[0].cutOffInner = 30.f;
+	lights[0].cutOffOuter = 30.f;
 	lights[0].ambient[0] = .25f;
 	lights[0].ambient[1] = .25f;
 	lights[0].ambient[2] = .25f;
@@ -409,7 +408,7 @@ int main()
 		glClearColor(clearColor[0], clearColor[1], clearColor[2], 1.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glm_perspective(RAD(fov), (float) framebuffer->width / (float) framebuffer->height, .1f, 100.f, projection);
+		glm_perspective(RAD(camera->fov), (float) framebuffer->width / (float) framebuffer->height, camera->near, camera->far, projection);
 		cameraGetViewMatrix(camera, &view);
 
 		glUseProgram(shaderLighting);
@@ -642,11 +641,11 @@ void scrollCallback(GLFWwindow* window, const double xOffset, const double yOffs
 	if (!mouseCaptured)
 		return;
 
-	fov -= (float) yOffset;
-	if (fov < 1.f)
-		fov = 1.f;
-	if (fov > 90.f)
-		fov = 90.f;
+	camera->fov -= (float) yOffset;
+	if (camera->fov < 1.f)
+		camera->fov = 1.f;
+	if (camera->fov > 90.f)
+		camera->fov = 90.f;
 }
 
 void guiInit(GLFWwindow* window)
@@ -734,7 +733,8 @@ void guiUpdate()
 		igSeparator();
 		igDragFloat("Speed", &cameraSpeed, .1f, .1f, 20.f, "%.2f", 0);
 		igDragFloat("Mouse Sensitivity", &mouseSensitivity, .05f, .05f, 1.f, "%.2f", 0);
-		igDragFloat("FOV", &fov, 1.f, 1.f, 90.f, "%.1f", 0);
+		igDragFloat("FOV", &camera->fov, 1.f, 1.f, 90.f, "%.1f", 0);
+		igDragFloatRange2("Near/Far", &camera->near, &camera->far, 1.f, .1f, 1000.f, "%.1f", "%.1f", 0);
 	}
 
 	if (igCollapsingHeader_BoolPtr("Lights", NULL, 0))

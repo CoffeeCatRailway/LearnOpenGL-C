@@ -8,13 +8,18 @@
 #include "camera.h"
 #include "util.h"
 
-camera_t* cameraCreate(const vec3 pos, const float yaw, const float pitch, const float pitchConstraint)
+camera_t* cameraCreate(const vec3 pos, const float yaw, const float pitch, const float pitchConstraint, const float fov, const float near, const float far)
 {
 	camera_t* camera = (camera_t*) malloc(sizeof(camera_t));
 	memcpy(camera->position, pos, sizeof(float) * 3); // vec3 is a float array of 3
+
 	camera->yaw = yaw;
 	camera->pitch = pitch;
 	camera->pitchConstraint = pitchConstraint;
+
+	camera->fov = fov;
+	camera->near = near;
+	camera->far = far;
 
 	cameraUpdateVectors(camera);
 	return camera;
@@ -60,21 +65,21 @@ void cameraMoveRight(camera_t* camera, const float delta)
 	glm_vec3_add(camera->position, step, camera->position);
 }
 
-void cameraMoveUp(camera_t* camera, float delta)
+void cameraMoveUp(camera_t* camera, const float delta)
 {
 	vec3 step;
 	glm_vec3_scale(camera->up, delta, step);
 	glm_vec3_add(camera->position, step, camera->position);
 }
 
-void cameraMoveDown(camera_t* camera, float delta)
+void cameraMoveDown(camera_t* camera, const float delta)
 {
 	vec3 step;
 	glm_vec3_scale(camera->up, delta, step);
 	glm_vec3_sub(camera->position, step, camera->position);
 }
 
-void cameraProcessMouse(camera_t* camera, float xOffset, float yOffset)
+void cameraProcessMouse(camera_t* camera, const float xOffset, const float yOffset)
 {
 	camera->yaw += xOffset;
 	camera->pitch += yOffset;
@@ -97,7 +102,7 @@ void cameraUpdateVectors(camera_t* camera)
 	front[1] = sinf(RAD(camera->pitch));
 	front[2] = sinf(RAD(camera->yaw)) * cosf(RAD(camera->pitch));
 	glm_vec3_normalize_to(front, camera->front);
-	glm_vec3_cross(camera->front, (vec3)GLOBAL_UP, camera->right);
+	glm_vec3_cross(camera->front, GLOBAL_UP, camera->right);
 	glm_vec3_normalize(camera->right);
 	glm_vec3_cross(camera->right, camera->front, camera->up);
 	glm_vec3_normalize(camera->up);
