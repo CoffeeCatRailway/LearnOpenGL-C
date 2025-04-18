@@ -98,7 +98,9 @@ void main()
 
 //	float average = (result.x + result.y + result.z) / 3.;
 //	result = mix(result, skyColor, average);
-	result = skyColor;
+//	result = skyColor;
+
+//	result = vec3(v_uv, 0.);
 
 	FragColor = vec4(result, matDiffuse.a);// * (1. - depthVec) + depthVec;
 }

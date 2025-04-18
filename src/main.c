@@ -55,6 +55,7 @@ typedef struct light_t
 
 const unsigned int WIDTH = 1600;
 const unsigned int HEIGHT = 900;
+const unsigned int SEED = 0;
 
 bool firstMouse = true;
 float lastX = 0.f;
@@ -62,7 +63,7 @@ float lastY = 0.f;
 
 float deltaTime = 0.f;
 float lastFrame = 0.f;
-bool vsync = true;
+bool vsync = false;
 
 vec3 clearColor = {0.f, 0.f, 0.f};
 bool postProcessing = false;
@@ -70,7 +71,7 @@ framebuffer_t* framebuffer;
 
 camera_t* camera;
 bool mouseCaptured = false;
-float cameraSpeed = 7.f;
+float cameraSpeed = 10.f;
 float mouseSensitivity = .1f;
 
 ImGuiContext* imguiCtx;
@@ -92,9 +93,16 @@ void guiTerminate();
 void guiLightSettings(const char* label, light_t* light);
 void guiUpdate();
 
+float randf()
+{
+	return (float) (rand() % 101) / 100.f * 2. - 1.f;
+}
+
 int main()
 {
 	printf("Hello, World!\n");
+	srand(SEED);
+	printf("Seed: %d\n", SEED);
 
 	glfwSetErrorCallback(errorCallback);
 
@@ -119,7 +127,7 @@ int main()
 		exit(EXIT_FAILURE);
 	}
 	glfwMakeContextCurrent(window);
-	glfwSwapInterval(1);
+	glfwSwapInterval(vsync);
 
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
@@ -243,18 +251,27 @@ int main()
 		 1.0f, -1.0f,  1.0f
 	};
 
-	vec3 cubePositions[] = {
-		{0.f, 0.f, 0.f},
-		{-1.5f, -2.2f, 2.5f},
-		{2.4f, -.4f, -3.5f},
-		{-2.7f,  3.f, 2.5f},
-		{-3.8f, -2.f, -8.3f},
-		{1.3f, -2.f, -2.5f},
-		{1.5f,  .2f, -1.5f},
-		{1.5f,  2.f, 2.5f},
-		{2.f, 5.f, -9.f},
-		{-2.3f,  1.f, 1.5f}
-	};
+	const int instanceAmount = 100;//256000;
+	// vec3 instancePositions[] = {
+	// 	{0.f, 0.f, 0.f},
+	// 	{-1.5f, -2.2f, 2.5f},
+	// 	{2.4f, -.4f, -3.5f},
+	// 	{-2.7f,  3.f, 2.5f},
+	// 	{-3.8f, -2.f, -8.3f},
+	// 	{1.3f, -2.f, -2.5f},
+	// 	{1.5f,  .2f, -1.5f},
+	// 	{1.5f,  2.f, 2.5f},
+	// 	{2.f, 5.f, -9.f},
+	// 	{-2.3f,  1.f, 1.5f}
+	// };
+	// vec3 instancePositions[instanceAmount];
+	// for (int i = 0; i < instanceAmount; i++)
+	// {
+	// 	instancePositions[i][0] = randf() * 50.f;
+	// 	instancePositions[i][1] = (randf() + .5f + .5f) * 50.f;
+	// 	instancePositions[i][2] = randf() * 50.f;
+	// }
+	// printf("%f %f %f\n", instancePositions[0][0], instancePositions[0][1], instancePositions[0][2]);
 
 	// Build & compile shaders
 	const GLuint shaderLighting = shaderCreate("resources/shaders/light.vert", "resources/shaders/light_multi.frag", NULL);
@@ -324,6 +341,7 @@ int main()
 
 	mesh_t* meshMonkey = meshCreate("resources/models/monkey.obj", false);
 	mesh_t* meshCube = meshCreate("resources/models/cube_fixed.obj", false);
+	mesh_t* meshInstance = meshCreate("resources/models/monkey.obj", false);
 
 	// Load image, create texture & generate mipmaps
 	stbi_set_flip_vertically_on_load(1);
@@ -364,6 +382,78 @@ int main()
 	glUseProgram(shaderGeomExplode);
 	setUniform1i(&shaderGeomExplode, "u_texture", 0);
 
+	// generate list of transforms
+	mat4* modelMatrices = malloc(sizeof(mat4) * instanceAmount);
+	if (modelMatrices == NULL)
+	{
+		fprintf(stderr, "Out of memory! Failed to allocate model matrices!\n");
+		free(modelMatrices);
+		exit(EXIT_FAILURE);
+	}
+	const float radius = 100.f;
+	const float offset = 20.f;
+	for (int i = 0; i < instanceAmount; i++)
+	{
+		mat4 model;
+		glm_mat4_identity(model);
+		// translate along circle with 'radius' in range [-offset, offset]
+		const float angle = (float) i / (float) instanceAmount * 360.f;
+		float displacement = (float) (rand() % (int)(2 * offset * 100.f)) / 100.f - offset;
+		const float x = sinf(angle) * radius + displacement;
+		displacement = (float) (rand() % (int)(2 * offset * 100.f)) / 100.f - offset;
+		const float y = displacement * .5f;
+		displacement = (float) (rand() % (int)(2 * offset * 100.f)) / 100.f - offset;
+		const float z = cosf(angle) * radius + displacement;
+		glm_translate(model, (vec3){x, y, z});
+
+		// scale between .05 & .75
+		const float scale = (float) (rand() % 75) / 100.f + .25f;
+		glm_scale(model, (vec3){scale, scale, scale});
+
+		// rotate around a semi-random axis vector
+		const float rotAngle = (float) (rand() % 360);
+		glm_rotate(model, rotAngle, (vec3){.4f, .6f, .8f});
+
+		// modelMatrices[i] = model;
+		glm_mat4_copy(model, modelMatrices[i]);
+		// memcpy(&modelMatrices[i], &model, sizeof(mat4));
+	}
+	printf("Generate model matrices\n");
+
+	// configure instanced array
+	GLuint instanceBuffer;
+	glBindVertexArray(meshInstance->vao);
+	glCreateBuffers(1, &instanceBuffer);
+	glNamedBufferData(instanceBuffer, instanceAmount * sizeof(mat4), &modelMatrices[0], GL_STATIC_DRAW);
+	// glNamedBufferData(instanceBuffer, sizeof(modelMatrices), modelMatrices, GL_STATIC_DRAW);
+
+	glVertexArrayVertexBuffer(meshInstance->vao, 1, instanceBuffer, 0, sizeof(mat4));
+
+	// set transformation matrices as an instance vertex attribute (with divisor 1)
+	// note: we're cheating a little by taking the, now publicly declared, VAO of the model's mesh(es) and adding new vertexAttribPointers
+	// normally you'd want to do this in a more organized fashion, but for learning purposes this will do.
+	// -----------------------------------------------------------------------------------------------------------------------------------
+	// ^^ This comment was copied from learnopengl.com ^^
+	glVertexArrayAttribFormat(meshInstance->vao, 3, 4, GL_FLOAT, GL_FALSE, 0);
+	glVertexArrayAttribBinding(meshInstance->vao, 3, 1);
+	glVertexArrayAttribFormat(meshInstance->vao, 4, 4, GL_FLOAT, GL_FALSE, sizeof(vec4));
+	glVertexArrayAttribBinding(meshInstance->vao, 4, 1);
+	glVertexArrayAttribFormat(meshInstance->vao, 5, 4, GL_FLOAT, GL_FALSE, 2 * sizeof(vec4));
+	glVertexArrayAttribBinding(meshInstance->vao, 5, 1);
+	glVertexArrayAttribFormat(meshInstance->vao, 6, 4, GL_FLOAT, GL_FALSE, 3 * sizeof(vec4));
+	glVertexArrayAttribBinding(meshInstance->vao, 6, 1);
+
+	glVertexArrayBindingDivisor(meshInstance->vao, 1, 1);
+
+	glEnableVertexArrayAttrib(meshInstance->vao, 3);
+	glEnableVertexArrayAttrib(meshInstance->vao, 4);
+	glEnableVertexArrayAttrib(meshInstance->vao, 5);
+	glEnableVertexArrayAttrib(meshInstance->vao, 6);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+	printf("Model instance vbo\n");
+
 	// Framebuffer
 	framebuffer = framebufferCreate(WIDTH, HEIGHT);
 	if (!framebufferInit(framebuffer))
@@ -375,7 +465,7 @@ int main()
 
 	// Setup camera
 	// Initialize yaw to -90 since 0 results in a direction vector pointing to the right
-	camera = cameraCreate((vec3){0.f, 0.f, 10.f}, -90.f, 0.f, 89.f, 45.f, .1f, 100.f);
+	camera = cameraCreate((vec3){0.f, 0.f, 10.f}, -90.f, 0.f, 89.f, 45.f, .1f, 500.f);
 
 	// Sun Light
 	lights[0].enable = true;
@@ -447,6 +537,7 @@ int main()
 	glm_mat4_identity(identity);
 	glm_mat4_identity(view);
 	glm_mat4_identity(projection);
+	printf("Starting main loop\n");
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -496,6 +587,7 @@ int main()
 
 		// lights & models affected by lights
 		glUseProgram(shaderLighting);
+		setUniform1i(&shaderLighting, "u_isInstance", 0);
 		for (int i = 0; i < MAX_LIGHTS; i++)
 		{
 			char lightParam[23];
@@ -551,20 +643,25 @@ int main()
 		glBindVertexArray(meshCube->vao);
 		glDrawArrays(GL_TRIANGLES, 0, meshCube->numVertices);
 
-		glBindVertexArray(meshMonkey->vao);
-		for (int i = 0; i < 10; i++)
-		{
-			glm_mat4_identity(model);
-			glm_translate(model, cubePositions[i]);
-			float angle = 20.f * (float) i;
-			if (i % 2 == 0)
-				angle += currentFrame * (40.f + (float) i * 40.f);
-			glm_rotate(model, RAD(angle), (vec3){1.f, .3f, .5f});
-			// glm_mat4_scale(model, .5f);
-			glm_scale(model, (vec3){.5f, .5f, .5f});
-			setUniformMatrix4fv(&shaderLighting, "u_model", (GLfloat*) model);
-			glDrawArrays(GL_TRIANGLES, 0, meshMonkey->numVertices);
-		}
+		// glBindVertexArray(meshMonkey->vao);
+		// for (int i = 0; i < instanceAmount; i++)
+		// {
+		// 	glm_mat4_identity(model);
+		// 	glm_translate(model, instancePositions[i]);
+		// 	float angle = 20.f * (float) i;
+		// 	if (i % 2 == 0)
+		// 		angle += currentFrame * (40.f + (float) i * 40.f);
+		// 	glm_rotate(model, RAD(angle), (vec3){1.f, .3f, .5f});
+		// 	// glm_mat4_scale(model, .5f);
+		// 	glm_scale(model, (vec3){.5f, .5f, .5f});
+		// 	setUniformMatrix4fv(&shaderLighting, "u_model", (GLfloat*) model);
+			// glDrawArrays(GL_TRIANGLES, 0, meshMonkey->numVertices);
+		// }
+
+		setUniform1i(&shaderLighting, "u_isInstance", 1);
+		glBindVertexArray(meshInstance->vao);
+		glDrawArraysInstanced(GL_TRIANGLES, 0, meshInstance->numVertices, instanceAmount);
+		setUniform1i(&shaderLighting, "u_isInstance", 0);
 
 		// Exploding monkey
 		glUseProgram(shaderGeomExplode);
@@ -678,8 +775,12 @@ int main()
 	glDeleteVertexArrays(1, &vaoSkybox);
 	glDeleteBuffers(1, &vboSkybox);
 
+	glDeleteBuffers(1, &instanceBuffer);
+	free(modelMatrices);
+
 	meshDestroy(meshMonkey);
 	meshDestroy(meshCube);
+	meshDestroy(meshInstance);
 
 	glDeleteProgram(shaderLighting);
 	glDeleteProgram(shaderSingleColor);
