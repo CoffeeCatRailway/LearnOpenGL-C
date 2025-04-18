@@ -251,7 +251,7 @@ int main()
 		 1.0f, -1.0f,  1.0f
 	};
 
-	const int instanceAmount = 100;//256000;
+	const int instanceAmount = 1000;//256000;
 	// vec3 instancePositions[] = {
 	// 	{0.f, 0.f, 0.f},
 	// 	{-1.5f, -2.2f, 2.5f},
@@ -655,7 +655,7 @@ int main()
 		// 	// glm_mat4_scale(model, .5f);
 		// 	glm_scale(model, (vec3){.5f, .5f, .5f});
 		// 	setUniformMatrix4fv(&shaderLighting, "u_model", (GLfloat*) model);
-			// glDrawArrays(GL_TRIANGLES, 0, meshMonkey->numVertices);
+		// glDrawArrays(GL_TRIANGLES, 0, meshMonkey->numVertices);
 		// }
 
 		setUniform1i(&shaderLighting, "u_isInstance", 1);
