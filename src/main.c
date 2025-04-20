@@ -93,10 +93,10 @@ void guiTerminate();
 void guiLightSettings(const char* label, light_t* light);
 void guiUpdate();
 
-float randf()
-{
-	return (float) (rand() % 101) / 100.f * 2. - 1.f;
-}
+// float randf()
+// {
+// 	return (float) (rand() % 101) / 100.f * 2. - 1.f;
+// }
 
 int main()
 {
@@ -251,7 +251,7 @@ int main()
 		 1.0f, -1.0f,  1.0f
 	};
 
-	const int instanceAmount = 1000;//256000;
+	const int instanceAmount = 100;//256000;
 	// vec3 instancePositions[] = {
 	// 	{0.f, 0.f, 0.f},
 	// 	{-1.5f, -2.2f, 2.5f},
@@ -347,8 +347,8 @@ int main()
 	stbi_set_flip_vertically_on_load(1);
 
 	// load textures
-	const GLuint diffuseTexture = loadTextureFromFile("resources/textures/brick_wall.jpg", GL_REPEAT, GL_REPEAT);
-	const GLuint specularTexture = loadTextureFromFile("resources/textures/brick_wall_specular.jpg", GL_REPEAT, GL_REPEAT);
+	const GLuint diffuseTexture = loadTextureFromFile("resources/textures/brickwall.jpg", GL_REPEAT, GL_REPEAT);
+	const GLuint specularTexture = loadTextureFromFile("resources/textures/brickwall_specular.jpg", GL_REPEAT, GL_REPEAT);
 	// GLuint emissionMap = loadTextureFromFile("resources/textures/container2_emission.png");
 	const GLuint grassTexture = loadTextureFromFile("resources/textures/grass.png", GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 	const GLuint grassSpecularTexture = loadTextureFromFile("resources/textures/grass_specular.png", GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
@@ -370,7 +370,7 @@ int main()
 	// setUniform1i(&shaderLighting, "u_material.flags", F_MAT_DIFFUSE | F_MAT_SPECULAR);
 	setUniform1i(&shaderLighting, "u_material.diffuseTex", 0);
 	setUniform1i(&shaderLighting, "u_material.specularTex", 1);
-	setUniform1f(&shaderLighting, "u_material.shininess", 64.f);
+	setUniform1f(&shaderLighting, "u_material.shininess", 32.f);
 	setUniform1i(&shaderLighting, "u_skybox", 2);
 
 	glUseProgram(shaderQuadTexture);
@@ -390,8 +390,8 @@ int main()
 		free(modelMatrices);
 		exit(EXIT_FAILURE);
 	}
-	const float radius = 100.f;
-	const float offset = 20.f;
+	const float radius = 10.f;
+	const float offset = 10.f;
 	for (int i = 0; i < instanceAmount; i++)
 	{
 		mat4 model;
@@ -491,7 +491,7 @@ int main()
 	lights[0].range = 200.f;
 
 	// Camera Light
-	lights[1].enable = true;
+	lights[1].enable = false;
 	strcpy(lights[1].name, "Camera");
 	lights[1].mode = F_LHT_SPOT;
 	memcpy(&lights[1].position, &camera->position, sizeof(vec3));
@@ -514,7 +514,7 @@ int main()
 	strcpy(lights[2].name, "Spot");
 	lights[2].mode = F_LHT_SPOT;
 	lights[2].position[0] = 0.f;
-	lights[2].position[1] = 10.5f;
+	lights[2].position[1] = 15.f;
 	lights[2].position[2] = 0.f;
 	lights[2].direction[0] = 0.f;
 	lights[2].direction[1] = -1.f;
@@ -560,8 +560,8 @@ int main()
 		memcpy(&lights[2].specular, &lightColor, sizeof(vec3));
 
 		//lights[2].position[0] = 1.2f * cosf(currentFrame);
-		lights[2].position[0] = sinf(currentFrame) * 2.f;
-		lights[2].position[2] = cosf(currentFrame) * 2.f;
+		lights[2].position[0] = sinf(currentFrame) * 4.f;
+		lights[2].position[2] = cosf(currentFrame) * 4.f;
 
 		guiUpdate();
 
@@ -638,7 +638,7 @@ int main()
 		mat4 model;
 		glm_mat4_identity(model);
 		glm_translate(model, (vec3){0.f, -8.f, 0.f});
-		glm_scale(model, (vec3){10.f, 1.f, 10.f});
+		glm_scale(model, (vec3){20.f, .5f, 20.f});
 		setUniformMatrix4fv(&shaderLighting, "u_model", (GLfloat*) model);
 		glBindVertexArray(meshCube->vao);
 		glDrawArrays(GL_TRIANGLES, 0, meshCube->numVertices);
@@ -704,6 +704,8 @@ int main()
 		// glm_mat4_scale(model, .2f);
 		glm_scale(model, (vec3){.2f, .2f, .2f});
 		setUniformMatrix4fv(&shaderSingleColor, "u_model", (GLfloat*) model);
+		glBindVertexArray(meshCube->vao);
+		glDrawArrays(GL_TRIANGLES, 0, meshCube->numVertices);
 
 		// skybox
 		glDepthFunc(GL_LEQUAL);
